@@ -28,7 +28,7 @@ Add each document using this format:
 
 #### [project-brief.md](./project-brief.md)
 
-- Description: Purpose, scope, boundaries, and vocabulary of the moonbunny-host static site host.
+- Description: Purpose, scope, boundaries, and vocabulary of the burrow static site host.
 - Tags: `purpose`, `scope`, `deploy`, `agents`, `hosting`
 
 #### [technical-brief.md](./technical-brief.md)

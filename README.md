@@ -5,10 +5,8 @@
   <img width="480" height="480" alt="image" src="https://github.com/user-attachments/assets/15b2541f-c64a-4555-94b5-d130d8132ea5" />
 </p>
 
-
-
 ```sh
-moonbunny deploy ./dist --project demos
+burrow deploy ./dist --project demos
 # https://static.example.com/demos/1b2a97e0-.../
 ```
 
@@ -19,12 +17,12 @@ Everything serves from one domain as `/{project}/{slug}/`.
 Needs Node.js 20 or later and `~/.local/bin` on your `PATH`:
 
 ```sh
-git clone git@github.com:mnbny/moonbunny-host.git
-cd moonbunny-host
+git clone git@github.com:mnbny/burrow.git
+cd burrow
 node cli/setup.mjs
 ```
 
-### moonbunny deploy
+### burrow deploy
 
 Ships a directory or a single file to the server, then prints the URL and nothing else, so a script can capture it. If the slug is taken, the server picks a new one, so trust the printed URL over the slug you asked for.
 
@@ -37,7 +35,7 @@ Ships a directory or a single file to the server, then prints the URL and nothin
 | `--host`    |   ✔\*    | Server URL.                                                          |
 | `--token`   |   ✔\*    | A deploy token.                                                      |
 
-\* The `MOONBUNNY_HOST` and `MOONBUNNY_TOKEN` env vars satisfy these; a flag wins when both are set.
+\* The `BURROW_HOST` and `BURROW_TOKEN` env vars satisfy these; a flag wins when both are set.
 
 The server slugifies names: `"My Report"` becomes `my-report`. A deployed `index.html` serves at the slug root; any other single file serves at its own name.
 
@@ -45,15 +43,15 @@ A protected deploy shows a sign-in page. A correct sign-in sets a cookie for tha
 
 ```sh
 # password-protected, gone in 7 days
-moonbunny deploy ./coverage --project ci --slug pr-123 --auth me:secret --expires 7
+burrow deploy ./coverage --project ci --slug pr-123 --auth me:secret --expires 7
 
 # a single file, kept forever
-moonbunny deploy report.html --project docs --expires 0
+burrow deploy report.html --project docs --expires 0
 ```
 
-### moonbunny readme
+### burrow readme
 
-Prints this guide. Working with an agent? Tell it to run `moonbunny readme` and it has everything it needs.
+Prints this guide. Working with an agent? Tell it to run `burrow readme` and it has everything it needs.
 
 ## Server
 
@@ -79,7 +77,7 @@ The compose file pulls the published image and reads these from the environment 
 ## Development
 
 - Node.js 22 or later and pnpm 11.
-- `pnpm install`, then `node cli/setup.mjs --dev` to run your working copy as `moonbunny`.
+- `pnpm install`, then `node cli/setup.mjs --dev` to run your working copy as `burrow`.
 - `pnpm validate` formats, lints, typechecks, and rebuilds the committed `*.bundle.mjs` files. They are generated; never edit them.
 - `pnpm test` runs the end-to-end harness: the real container behind a real proxy in Docker, deployed to with the real CLI.
 - `pnpm release` builds the image for x86_64 and pushes `:latest` plus an immutable `:<commit>` tag. It refuses a dirty tree.

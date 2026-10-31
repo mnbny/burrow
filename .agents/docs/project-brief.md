@@ -2,7 +2,7 @@
 
 ## Purpose
 
-moonbunny-host is a self-hosted host for any static site, for personal use. It exists so the owner and the owner's coding agents can publish static content programmatically and share it at a URL: build reports, demos, one-off pages. Deploys are ephemeral by design, so published content removes itself. It implements only the deploy workflow of a static host such as surge.sh, nothing else.
+burrow is a self-hosted host for any static site, for personal use. It exists so the owner and the owner's coding agents can publish static content programmatically and share it at a URL: build reports, demos, one-off pages. Deploys are ephemeral by design, so published content removes itself. It implements only the deploy workflow of a static host such as surge.sh, nothing else.
 
 ## Vocabulary
 
