@@ -1,4 +1,4 @@
-name: moonbunny-host-test
+name: moonbunny-burrow-test
 
 services:
   app:

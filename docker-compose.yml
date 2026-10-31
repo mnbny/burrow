@@ -1,6 +1,7 @@
+name: moonbunny
 services:
-  moonbunny-host:
-    image: ${IMAGE_URL:-ghcr.io/mnbny/moonbunny-host}:${IMAGE_VERSION:-latest}
+  burrow:
+    image: ${IMAGE_URL:-ghcr.io/mnbny/burrow}:${IMAGE_VERSION:-latest}
     ports:
       - '${PORT:-8080}:8080'
     environment:

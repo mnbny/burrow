@@ -52,6 +52,7 @@ const readMeta = dir => JSON.parse(fs.readFileSync(path.join(dir, '.meta.json'),
 // Sessions are HMAC tokens under a per-boot key: stateless to verify, and a
 // restart signs everyone out rather than persisting a secret anywhere.
 const SECRET = randomBytes(32)
+const COOKIE = 'mb_burrow'
 const sessionToken = slugKey => createHmac('sha256', SECRET).update(slugKey).digest('base64url')
 
 // Hashing both sides first permits a timing-safe compare of unequal lengths.
@@ -60,7 +61,9 @@ const safeEqual = (a, b) =>
 
 const hasSession = (req, slugKey) => {
   const token = sessionToken(slugKey)
-  return (req.headers.cookie || '').split(/;\s*/).some(c => c.startsWith('mb_auth=') && safeEqual(c.slice(8), token))
+  return (req.headers.cookie || '')
+    .split(/;\s*/)
+    .some(c => c.startsWith(`${COOKIE}=`) && safeEqual(c.slice(COOKIE.length + 1), token))
 }
 
 const LOGIN_PAGE = `<!doctype html>
@@ -317,7 +320,7 @@ function login(req, res, urlPath) {
       const slugKey = `${parts[0]}/${parts[1]}`
       res.writeHead(303, {
         Location: urlPath,
-        'Set-Cookie': `mb_auth=${sessionToken(slugKey)}; Path=/${slugKey}; Max-Age=2592000; HttpOnly; SameSite=Lax`,
+        'Set-Cookie': `${COOKIE}=${sessionToken(slugKey)}; Path=/${slugKey}; Max-Age=2592000; HttpOnly; SameSite=Lax`,
       })
       res.end()
     } catch {
@@ -425,5 +428,5 @@ http
   })
   .listen(PORT, () => {
     if (!TOKENS.length) console.warn('WARNING: DEPLOY_TOKENS empty — deploys disabled')
-    console.log(`moonbunny-host on :${PORT}, serving ${ROOT}`)
+    console.log(`burrow on :${PORT}, serving ${ROOT}`)
   })

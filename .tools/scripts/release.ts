@@ -3,7 +3,7 @@ import process from 'node:process'
 
 // The NAS is x86_64 and the build machine is ARM, so the platform is pinned.
 const PLATFORM = 'linux/amd64'
-const REPO = process.env['MOONBUNNY_IMAGE'] ?? 'ghcr.io/mnbny/moonbunny-host'
+const REPO = process.env['BURROW_IMAGE'] ?? 'ghcr.io/mnbny/burrow'
 
 function run(command: string, args: string[]) {
   const result = spawnSync(command, args, { stdio: 'inherit' })
