@@ -1,3 +1,3 @@
 # Generated, committed for consumers. Regenerate with `pnpm build`; never merge them by hand.
-cli/moonbunny.bundle.mjs -diff linguist-generated=true
+cli/burrow.bundle.mjs -diff linguist-generated=true
 server/server.bundle.mjs -diff linguist-generated=true

@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 if (process.env.CI) {
-  console.log('CI detected. Skipping moonbunny link.')
+  console.log('CI detected. Skipping burrow link.')
   process.exit(0)
 }
 
@@ -16,9 +16,9 @@ if (process.env.CI) {
 // needs no install. The development entry needs the repository's dependencies.
 const developing = process.argv.includes('--dev')
 const cliDirectory = dirname(fileURLToPath(import.meta.url))
-const entry = join(cliDirectory, developing ? 'moonbunny.mjs' : 'moonbunny.bundle.mjs')
+const entry = join(cliDirectory, developing ? 'burrow.mjs' : 'burrow.bundle.mjs')
 const binDir = join(homedir(), '.local', 'bin')
-const link = join(binDir, 'moonbunny')
+const link = join(binDir, 'burrow')
 
 if (!(await lstat(entry).catch(() => null))) {
   console.error(
@@ -33,15 +33,15 @@ await mkdir(binDir, { recursive: true })
 const existing = await lstat(link).catch(() => null)
 
 if (existing && !existing.isSymbolicLink()) {
-  console.error(`${link} exists and is not a symlink. moonbunny was not linked.`)
+  console.error(`${link} exists and is not a symlink. burrow was not linked.`)
   process.exit(0)
 }
 
 if (existing) await rm(link)
 await symlink(entry, link)
 
-console.log(`Linked moonbunny to ${entry}${developing ? ' (development entry)' : ''}`)
+console.log(`Linked burrow to ${entry}${developing ? ' (development entry)' : ''}`)
 
 if (!(process.env.PATH ?? '').split(':').includes(binDir)) {
-  console.warn(`${binDir} is not on your PATH. Add it to run moonbunny.`)
+  console.warn(`${binDir} is not on your PATH. Add it to run burrow.`)
 }

@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint'
 export default tseslint.config(
   {
     // node_modules and .git are ignored by flat config already.
-    ignores: ['data/**', 'cli/moonbunny.bundle.mjs', 'server/server.bundle.mjs'],
+    ignores: ['data/**', 'cli/burrow.bundle.mjs', 'server/server.bundle.mjs'],
   },
 
   jseslint.configs.recommended,

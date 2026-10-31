@@ -1,11 +1,11 @@
 {
-  "name": "@moonbunny/host",
+  "name": "@moonbunny/burrow",
   "version": "0.0.0",
   "private": true,
   "description": "Self-hosted static report host with a deploy CLI",
   "type": "module",
   "bin": {
-    "moonbunny": "./cli/moonbunny.mjs"
+    "burrow": "./cli/burrow.mjs"
   },
   "scripts": {
     "build": "tsx .tools/scripts/build.ts",

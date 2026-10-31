@@ -7,7 +7,7 @@ import { minify } from 'terser'
 const repoRoot = process.cwd()
 
 const BUNDLES = [
-  { entry: join('cli', 'cli.ts'), out: join('cli', 'moonbunny.bundle.mjs') },
+  { entry: join('cli', 'cli.ts'), out: join('cli', 'burrow.bundle.mjs') },
   { entry: join('server', 'server.mjs'), out: join('server', 'server.bundle.mjs') },
 ]
 
@@ -15,7 +15,7 @@ const BUNDLES = [
 // reach `require`. esbuild's interop shim uses the binding when one is in scope, so the banner
 // supplies it.
 const BANNER = `#!/usr/bin/env node
-import{createRequire as __moonbunnyRequire}from'node:module';const require=__moonbunnyRequire(import.meta.url);`
+import{createRequire as __burrowRequire}from'node:module';const require=__burrowRequire(import.meta.url);`
 
 // Lower than the release that building this repository needs. The consumer runs the bundle on
 // whatever Node the machine already has, and this is the oldest release the dependencies support.

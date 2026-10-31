@@ -5,10 +5,10 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 HOST=http://127.0.0.1:18199
-export MOONBUNNY_HOST=$HOST MOONBUNNY_TOKEN=test-token
+export BURROW_HOST=$HOST BURROW_TOKEN=test-token
 
 compose() { docker compose -f compose.yml "$@"; }
-cli() { node ../cli/moonbunny.mjs deploy "$@"; }
+cli() { node ../cli/burrow.mjs deploy "$@"; }
 code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 
 trap 'compose down --volumes --timeout 2 > /dev/null 2>&1' EXIT
@@ -55,14 +55,14 @@ check "traversal is blocked" 404 "$(code -b "$jar" "$HOST/reports/smoke/..%2f..%
 url2=$(cli fixtures --project reports)
 check "uuid deploy serves without auth" 200 "$(code "$url2")"
 
-if MOONBUNNY_TOKEN=bad cli fixtures --project reports --slug intruder > /dev/null 2>&1; then
+if BURROW_TOKEN=bad cli fixtures --project reports --slug intruder > /dev/null 2>&1; then
   check "bad token is rejected" rejected accepted
 else
   check "bad token is rejected" rejected rejected
 fi
 
 # Flags beat env vars: bad env, correct flags.
-urlflag=$(MOONBUNNY_HOST=http://127.0.0.1:1 MOONBUNNY_TOKEN=bad cli fixtures --project reports --host "$HOST" --token test-token)
+urlflag=$(BURROW_HOST=http://127.0.0.1:1 BURROW_TOKEN=bad cli fixtures --project reports --host "$HOST" --token test-token)
 check "host and token flags override env" 200 "$(code "$urlflag")"
 
 url3=$(cli fixtures --project reports --slug smoke)

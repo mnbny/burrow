@@ -12,7 +12,7 @@ function fail(message: string): never {
 
 export default defineCommand({
   meta: {
-    description: 'Deploy a directory or a single file to moonbunny-host',
+    description: 'Deploy a directory or a single file to burrow',
     name: 'deploy',
   },
   args: {
@@ -27,15 +27,15 @@ export default defineCommand({
       description: 'Days until the deploy is deleted; 0 keeps it forever (server default: 30)',
       type: 'string',
     },
-    host: { description: 'Server URL (overrides MOONBUNNY_HOST)', type: 'string' },
-    token: { description: 'Deploy token (overrides MOONBUNNY_TOKEN)', type: 'string' },
+    host: { description: 'Server URL (overrides BURROW_HOST)', type: 'string' },
+    token: { description: 'Deploy token (overrides BURROW_TOKEN)', type: 'string' },
   },
   async run({ args }) {
-    const host = (args.host ?? process.env['MOONBUNNY_HOST'])?.replace(/\/$/, '')
-    const token = args.token ?? process.env['MOONBUNNY_TOKEN']
+    const host = (args.host ?? process.env['BURROW_HOST'])?.replace(/\/$/, '')
+    const token = args.token ?? process.env['BURROW_TOKEN']
 
-    if (!host) fail('Set MOONBUNNY_HOST or pass --host.')
-    if (!token) fail('Set MOONBUNNY_TOKEN or pass --token.')
+    if (!host) fail('Set BURROW_HOST or pass --host.')
+    if (!token) fail('Set BURROW_TOKEN or pass --token.')
 
     const target = await stat(args.dir).catch(() => null)
     if (!target?.isDirectory() && !target?.isFile()) fail(`Not a directory or file: ${args.dir}`)

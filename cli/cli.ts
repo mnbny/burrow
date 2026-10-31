@@ -9,8 +9,8 @@ process.stdout.on('error', (error: NodeJS.ErrnoException) => {
 
 const main = defineCommand({
   meta: {
-    name: 'moonbunny',
-    description: 'Deploy static reports to moonbunny-host',
+    name: 'burrow',
+    description: 'Deploy static reports to burrow',
   },
   subCommands: { deploy, readme },
 })
