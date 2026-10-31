@@ -1,7 +1,11 @@
-<div align="center">
-  <h1>moonbunny-host</h1>
-  <p>A tiny self-hosted host for static sites. You deploy a folder, you get a URL back, and the deploy quietly deletes itself after it expires. That makes it a good dumping ground for agents: build reports, demos, one-off pages.</p>
-</div>
+<h1 align="center">Burrow</h1>
+ <p align="center">A tiny self-hosted host for static sites. You deploy a folder, you get a URL back, and the deploy quietly deletes itself after it expires. That makes it a good dumping ground for agents: build reports, demos, one-off pages.</p>
+
+<p align="center">
+  <img width="480" height="480" alt="image" src="https://github.com/user-attachments/assets/15b2541f-c64a-4555-94b5-d130d8132ea5" />
+</p>
+
+
 
 ```sh
 moonbunny deploy ./dist --project demos
