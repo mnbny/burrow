@@ -2,9 +2,10 @@ name: moonbunny-burrow-test
 
 services:
   app:
-    build: ..
+    build: ../..
     environment:
       DEPLOY_TOKENS: test-token
+      HIDE_FOOTER: ${HIDE_FOOTER:-0}
 
   proxy:
     image: nginx:alpine
