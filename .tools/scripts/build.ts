@@ -1,6 +1,7 @@
 import { build } from 'esbuild'
+import { execFileSync } from 'node:child_process'
 import { writeFile } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { dirname, join, relative } from 'node:path'
 import process from 'node:process'
 import { minify } from 'terser'
 
@@ -28,7 +29,42 @@ async function main() {
       bundle: true,
       entryPoints: [join(repoRoot, entry)],
       format: 'esm',
+      loader: { '.html': 'text', '.txt': 'text' },
       platform: 'node',
+      plugins: [
+        {
+          name: 'viewer-assets',
+          setup(builder) {
+            builder.onLoad({ filter: /(\.css|\.client\.mjs)$/ }, async ({ path }) => {
+              const asset = await build({
+                ...(path.endsWith('.css')
+                  ? {
+                      stdin: {
+                        contents: execFileSync('pnpm', ['exec', 'tailwindcss', '--input', path, '--minify'], {
+                          cwd: repoRoot,
+                          encoding: 'utf8',
+                        }),
+                        loader: 'css',
+                        resolveDir: dirname(path),
+                        sourcefile: path,
+                      },
+                    }
+                  : { entryPoints: [path] }),
+                bundle: true,
+                format: 'iife',
+                loader: { '.woff2': 'dataurl' },
+                minify: true,
+                platform: 'browser',
+                target: 'es2022',
+                write: false,
+              })
+              const [output] = asset.outputFiles
+              if (!output) throw new Error(`esbuild produced no output for ${path}.`)
+              return { contents: output.text, loader: 'text' }
+            })
+          },
+        },
+      ],
       target: TARGET,
       write: false,
     })

@@ -54,5 +54,10 @@ export default tseslint.config(
     },
   },
 
+  {
+    files: ['server/components/*.client.mjs', '.tools/tests/viewer.mjs'],
+    languageOptions: { globals: { ...globals.browser } },
+  },
+
   pluginPrettier,
 )
