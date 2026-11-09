@@ -7,6 +7,7 @@ services:
     environment:
       DEPLOY_TOKENS: ${DEPLOY_TOKENS:-changeme} # comma-separated
       MAX_BODY_MB: ${MAX_BODY_MB:-50}
+      HIDE_FOOTER: ${HIDE_FOOTER:-0}
     volumes:
       - '${DATA_PATH:-./data}:/data'
     restart: unless-stopped
