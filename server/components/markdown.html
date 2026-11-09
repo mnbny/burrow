@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en" data-theme="moonbunny">
+  <!-- %%FONT_LICENSES%% -->
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>%%TITLE%% · Burrow</title>
+    <style>
+      /* %%STYLES%% */
+    </style>
+  </head>
+  <body
+    class="min-h-screen bg-base-100 font-sans text-base-content antialiased selection:bg-primary selection:text-primary-content">
+    <div class="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 py-7 sm:px-8 sm:py-10">
+      <main class="flex-1">
+        <header
+          class="mb-7 flex flex-col gap-5 border-b border-primary/20 pb-7 sm:flex-row sm:items-center sm:justify-between">
+          <h1
+            class="min-w-0 text-center font-display text-2xl leading-tight font-bold tracking-[-0.025em] wrap-anywhere sm:text-left sm:text-3xl">
+            <span
+              class="-mx-[0.05em] -my-[0.2em] inline-block bg-linear-to-b from-primary-gradient-from to-primary-gradient-to bg-clip-text px-[0.05em] py-[0.2em] text-transparent"
+              >%%TITLE%%</span
+            >
+          </h1>
+          <div class="flex shrink-0 items-center justify-center gap-4 sm:justify-end">
+            <nav aria-label="Document view" class="flex gap-1">
+              <a
+                href="%%PREVIEW_URL%%"
+                data-view="preview"
+                class="view-toggle btn btn-ghost btn-sm font-mono"
+                %%PREVIEW_CURRENT%%
+                >Preview</a
+              >
+              <a href="%%RAW_URL%%" data-view="raw" class="view-toggle btn btn-ghost btn-sm font-mono" %%RAW_CURRENT%%
+                >Raw</a
+              >
+            </nav>
+            <a href="%%DOWNLOAD_URL%%" download class="outline-button btn btn-sm mr-1 mb-1 gap-2">
+              <svg
+                aria-hidden="true"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M12 3v12m-5-5 5 5 5-5M5 16v5h14v-5" />
+              </svg>
+              Download
+            </a>
+          </div>
+        </header>
+        <section aria-label="Document" class="min-w-0 border-2 border-primary">
+          <p id="burrow-status" role="status" class="px-5 py-4 text-sm text-base-content/65" hidden>
+            Loading document…
+          </p>
+          <article id="burrow-preview" aria-label="Markdown preview" class="markdown p-5 sm:p-7" hidden></article>
+          <pre
+            id="burrow-source"
+            aria-label="Markdown source"
+            class="m-0 overflow-auto p-5 font-mono text-sm leading-7 [tab-size:2]"
+            hidden></pre>
+          <noscript
+            ><p class="p-5 text-base-content/65">
+              Enable JavaScript to view this document, or use Download to save the original file.
+            </p></noscript
+          >
+        </section>
+      </main>
+      %%FOOTER%%
+    </div>
+    <script type="module">
+      /* %%SCRIPT%% */
+    </script>
+  </body>
+</html>

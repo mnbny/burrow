@@ -6,6 +6,13 @@ import http from 'node:http'
 import path from 'node:path'
 import zlib from 'node:zlib'
 
+import fontLicenses from './components/font-licenses.txt'
+import { footer } from './components/footer.mjs'
+import loginScript from './components/login.client.mjs'
+import loginError from './components/login-error.html'
+import { markdownPage } from './components/markdown.mjs'
+import styles from './components/page.css'
+
 const ROOT = process.env.DATA_DIR || '/data'
 const PORT = process.env.PORT || 8080
 const TOKENS = (process.env.DEPLOY_TOKENS || '').split(',').filter(Boolean)
@@ -67,57 +74,52 @@ const hasSession = (req, slugKey) => {
 }
 
 const LOGIN_PAGE = `<!doctype html>
-<html lang="en">
+<html lang="en" data-theme="moonbunny">
+  <!-- ${fontLicenses} -->
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Sign in</title>
-    <style>
-      :root { --bg: #0a0b0e; --card: rgba(255,255,255,0.03); --border: rgba(255,255,255,0.08); --text: #e8eaf0; --muted: #71768a; --accent: #a7b4ff; --accent-strong: #7d8fff; }
-      * { box-sizing: border-box; margin: 0; }
-      body { min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--text); font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
-      body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(600px 420px at 70% 18%, rgba(125,143,255,0.14), transparent 60%), radial-gradient(900px 600px at 25% 85%, rgba(125,143,255,0.06), transparent 60%); pointer-events: none; }
-      main { width: min(360px, calc(100vw - 48px)); animation: rise 0.5s cubic-bezier(0.2,0.9,0.3,1) both; }
-      @keyframes rise { from { opacity: 0; transform: translateY(14px); } }
-      .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 36px 32px 32px; backdrop-filter: blur(20px); box-shadow: 0 24px 60px rgba(0,0,0,0.45); }
-      h1 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; }
-      p.sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
-      p.error { color: #ff9d9d; font-size: 13px; margin-top: 16px; }
-      form { margin-top: 28px; display: grid; gap: 14px; }
-      label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-      input { width: 100%; padding: 11px 14px; font: inherit; color: var(--text); background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 10px; outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s; }
-      input::placeholder { color: #4a4f63; }
-      input:focus { border-color: var(--accent-strong); background: rgba(255,255,255,0.06); box-shadow: 0 0 0 3px rgba(125,143,255,0.18); }
-      button { margin-top: 10px; padding: 12px; font: inherit; font-weight: 600; color: #0a0b0e; background: linear-gradient(180deg, var(--accent), var(--accent-strong)); border: 0; border-radius: 10px; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s, filter 0.12s; }
-      button:hover { filter: brightness(1.06); box-shadow: 0 6px 24px rgba(125,143,255,0.3); }
-      button:active { transform: translateY(1px); }
-    </style>
+    <meta name="color-scheme" content="dark" />
+    <title>Sign in · Burrow</title>
+    <style>${styles}</style>
   </head>
-  <body>
-    <main>
-      <div class="card">
-        <h1>Sign in</h1>
-        <p class="sub">This page is protected.</p>%%ERROR%%
-        <form method="post" action="">
-          <div>
-            <label for="u">Username</label>
-            <input id="u" name="username" autocomplete="username" placeholder="username" required autofocus />
-          </div>
-          <div>
-            <label for="p">Password</label>
-            <input id="p" name="password" type="password" autocomplete="current-password" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" required />
-          </div>
-          <button type="submit">Continue</button>
-        </form>
-      </div>
-    </main>
+  <body class="bg-base-100 font-sans text-base-content antialiased selection:bg-primary selection:text-primary-content">
+    <div class="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 py-7 sm:px-8 sm:py-10">
+      <main class="flex flex-1 items-center justify-center py-6">
+        <section aria-labelledby="sign-in-title" class="w-full max-w-md border-2 border-primary p-5 sm:p-7">
+          <header class="text-center sm:text-left">
+            <h1 id="sign-in-title" class="font-display text-3xl leading-tight font-bold tracking-[-0.025em] sm:text-4xl">
+              <span class="-mx-[0.05em] -my-[0.2em] inline-block bg-linear-to-b from-primary-gradient-from to-primary-gradient-to bg-clip-text px-[0.05em] py-[0.2em] text-transparent">Sign in</span>
+            </h1>
+            <p class="mt-3 text-base leading-7 text-base-content/65">This page is protected.</p>
+          </header>
+          <form method="post" action="" class="mt-7 grid gap-5">
+            <div>
+              <label for="u" class="block bg-primary px-3 py-3 font-mono text-xs font-bold tracking-[0.08em] text-primary-content uppercase sm:text-sm">Username</label>
+              <input id="u" name="username" autocomplete="username" placeholder="username" required autofocus
+                class="h-14 w-full min-w-0 rounded-none border-2 border-primary bg-base-100 px-4 text-base font-medium outline-none placeholder:text-base-content/45 focus:shadow-[4px_4px_0] focus:shadow-primary" />
+            </div>
+            <div>
+              <label for="p" class="block bg-primary px-3 py-3 font-mono text-xs font-bold tracking-[0.08em] text-primary-content uppercase sm:text-sm">Password</label>
+              <input id="p" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required
+                class="h-14 w-full min-w-0 rounded-none border-2 border-primary bg-base-100 px-4 text-base font-medium outline-none placeholder:text-base-content/45 focus:shadow-[4px_4px_0] focus:shadow-primary" />
+            </div>
+            <button type="submit" class="outline-button btn mt-2 mb-1 h-14 w-full text-base sm:text-lg">Continue</button>
+          </form>
+        </section>
+      </main>
+      ${footer}
+    </div>
+    %%ERROR%%
   </body>
 </html>
 `
 
 const loginPage = (res, error) => {
-  res.writeHead(401, { 'Content-Type': 'text/html' })
-  res.end(LOGIN_PAGE.replace('%%ERROR%%', error ? '\n        <p class="error">Wrong username or password.</p>' : ''))
+  res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8' })
+  res.end(
+    LOGIN_PAGE.replace('%%ERROR%%', () => (error ? `${loginError}<script type="module">${loginScript}</script>` : '')),
+  )
 }
 
 // tar refuses absolute symlinks but extracts relative ones, which would let a served
@@ -230,7 +232,7 @@ function deploy(req, res, urlPath) {
   })
 }
 
-function serve(req, res, urlPath) {
+function serve(req, res, urlPath, search) {
   // Forced unless a real file sits at the data root, which no deploy can create.
   if (urlPath === '/robots.txt' && !fs.existsSync(path.join(ROOT, 'robots.txt'))) {
     res.writeHead(200, { 'Content-Type': 'text/plain' })
@@ -281,14 +283,32 @@ function serve(req, res, urlPath) {
   }
   if (!stats?.isFile()) return end(res, 404, 'not found')
 
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream' })
+  const extension = path.extname(file).toLowerCase()
+  let contentType = MIME[extension] || 'application/octet-stream'
+  if (extension === '.md' || extension === '.markdown') {
+    res.setHeader('Vary', 'Accept')
+    const download = search.get('download') === '1'
+    const raw = search.get('raw') === '1'
+    if (!download && !raw && (req.headers.accept || '').includes('text/html')) {
+      return markdownPage(req, res, path.basename(file), search)
+    }
+    contentType = 'text/plain; charset=utf-8'
+    if (download) {
+      const name = encodeURIComponent(path.basename(file)).replace(
+        /['()*]/g,
+        c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+      )
+      res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${name}`)
+    }
+  }
+  res.writeHead(200, { 'Content-Type': contentType })
   if (req.method === 'HEAD') return res.end()
   const stream = fs.createReadStream(file)
   stream.on('error', () => res.destroy())
   stream.pipe(res)
 }
 
-function login(req, res, urlPath) {
+function login(req, res, urlPath, search) {
   let parts
   try {
     parts = urlPath.split('/').map(decodeURIComponent).filter(Boolean)
@@ -319,7 +339,8 @@ function login(req, res, urlPath) {
 
       const slugKey = `${parts[0]}/${parts[1]}`
       res.writeHead(303, {
-        Location: urlPath,
+        // A single leading slash keeps redirects local for //-prefixed requests.
+        Location: urlPath.replace(/^\/+/, '/') + (search.size ? `?${search}` : ''),
         'Set-Cookie': `${COOKIE}=${sessionToken(slugKey)}; Path=/${slugKey}; Max-Age=2592000; HttpOnly; SameSite=Lax`,
       })
       res.end()
@@ -418,9 +439,10 @@ http
     try {
       res.setHeader('X-Content-Type-Options', 'nosniff')
       const urlPath = req.url.split('?')[0]
+      const search = new URLSearchParams(req.url.slice(urlPath.length))
       if (req.method === 'PUT' && urlPath.startsWith('/_deploy/')) return deploy(req, res, urlPath)
-      if (req.method === 'POST') return login(req, res, urlPath)
-      if (req.method === 'GET' || req.method === 'HEAD') return serve(req, res, urlPath)
+      if (req.method === 'POST') return login(req, res, urlPath, search)
+      if (req.method === 'GET' || req.method === 'HEAD') return serve(req, res, urlPath, search)
       end(res, 405, 'method not allowed')
     } catch (e) {
       end(res, 500, 'server error')
