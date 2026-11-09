@@ -13,8 +13,8 @@ burrow is a self-hosted host for any static site, for personal use. It exists so
 ## Boundaries
 
 - One domain serves everything, addressed by path. There is no subdomain support.
-- Content is static files only. There is no server-side rendering, build step, or dynamic behavior.
-- A deploy requires a bearer token. When the deployer asks for it, a read of a slug requires basic auth.
+- Content is static files only. The host does not build or execute deployments. A browser viewer displays Markdown without changing the uploaded files.
+- A deploy requires a bearer token. A deploy may require viewing credentials, entered through a sign-in page.
 - This is not a product. There are no revisions, rollbacks, analytics, teams, plans, or account management, and none are planned.
 
 ## Direction

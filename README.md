@@ -53,6 +53,21 @@ burrow deploy report.html --project docs --expires 0
 
 Prints this guide. Working with an agent? Tell it to run `burrow readme` and it has everything it needs.
 
+## Markdown
+
+Open a deployed `.md` or `.markdown` file in a browser to read it in the built-in viewer. Preview is the default. The **Preview / Raw** toggle updates the URL, so shared links, refreshes, and browser history preserve the selected mode. A separate **Download** button in both modes saves the original file.
+
+| URL suffix               | Result                                             |
+| ------------------------ | -------------------------------------------------- |
+| None, or `?view=preview` | Formatted preview in a browser.                    |
+| `?view=raw`              | Original source inside the viewer.                 |
+| `?raw=1`                 | Original source as plain text, without the viewer. |
+| `?download=1`            | Download the original file.                        |
+
+Scripts that do not request `text/html` receive the original Markdown. The viewer supports tables, task lists, fenced code blocks, and links to document sections. Relative links and images resolve from the document URL; deploy their assets in the same directory structure. Viewing credentials protect all modes and downloads.
+
+The viewer and sign-in page use the Moon Bunny theme. Their styles, Markdown libraries, and fonts ship inside the server bundle; neither page needs a CDN. Preview sanitizes embedded HTML, and the uploaded file stays unchanged.
+
 ## Server
 
 One container. Run it behind your reverse proxy, which owns the domain and TLS. Allow request bodies at least as large as the upload cap in the proxy.
@@ -65,19 +80,22 @@ The container fixes the data path's ownership at start and then drops to an unpr
 
 The compose file pulls the published image and reads these from the environment or a `.env` file beside it:
 
-| Var             | Description                                                      |
-| --------------- | ---------------------------------------------------------------- |
-| `IMAGE_URL`     | Image to run. Default: the published image.                      |
+| Var | Description |
+| --- | --- |
+| `IMAGE_URL` | Image to run. Default: the published image. |
 | `IMAGE_VERSION` | Image tag. Pin a `<commit>` tag to roll back. Default: `latest`. |
-| `DEPLOY_TOKENS` | Comma-separated tokens that may deploy.                          |
-| `MAX_BODY_MB`   | Upload cap in MB; extracted content caps at 10x. Default `50`.   |
-| `DATA_PATH`     | Host path for the deployed content. Default `./data`.            |
-| `PORT`          | Published HTTP port. Default `8080`.                             |
+| `DEPLOY_TOKENS` | Comma-separated tokens that may deploy. |
+| `MAX_BODY_MB` | Upload cap in MB; extracted content caps at 10x. Default `50`. |
+| `HIDE_FOOTER` | Set to `1` to remove the Moon Bunny footer from the Markdown viewer and sign-in page. Shown by default. |
+| `DATA_PATH` | Host path for the deployed content. Default `./data`. |
+| `PORT` | Published HTTP port. Default `8080`. |
 
 ## Development
 
 - Node.js 22 or later and pnpm 11.
 - `pnpm install`, then `node cli/setup.mjs --dev` to run your working copy as `burrow`.
 - `pnpm validate` formats, lints, typechecks, and rebuilds the committed `*.bundle.mjs` files. They are generated; never edit them.
-- `pnpm test` runs the end-to-end harness: the real container behind a real proxy in Docker, deployed to with the real CLI.
+- The server source imports browser assets that require this build. Run the generated server bundle, not `server/server.mjs` directly.
+- Server UI files live in `server/components/`. Tests, fixtures, and test configuration live in `.tools/tests/`; build and release scripts live in `.tools/scripts/`.
+- `pnpm test` runs the end-to-end harness: the real container behind a real proxy in Docker, deployed to with the real CLI, plus browser checks for the Markdown viewer. The first run downloads Playwright's Chromium browser.
 - `pnpm release` builds the image for x86_64 and pushes `:latest` plus an immutable `:<commit>` tag. It refuses a dirty tree.
