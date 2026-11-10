@@ -8,7 +8,7 @@ burrow is a self-hosted host for any static site, for personal use. It exists so
 
 - Project: the first URL path segment. A project groups related deploys.
 - Slug: the second URL path segment. A slug identifies one deploy. When the deployer does not name a slug, the slug defaults to a random UUID.
-- Deploy: the upload of a directory of static files to one project and slug. Deploys are immutable: when the requested slug is taken, the server appends a unique suffix and the new deploy lands beside the old one. Deploys are ephemeral: each deploy expires after a number of days, 30 by default, and the server deletes expired deploys. A deploy may opt out of expiration.
+- Deploy: the upload of a directory of static files to one project and slug. By default, a taken slug receives a unique suffix and the existing deploy stays unchanged. Explicit replacement publishes all new files at the same slug and removes the old files. Replacement retains no previous versions. Deploys are ephemeral: each deploy expires after a number of days, 30 by default, and the server deletes expired deploys. A deploy may opt out of expiration.
 
 ## Boundaries
 

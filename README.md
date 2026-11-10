@@ -24,22 +24,23 @@ node cli/setup.mjs
 
 ### burrow deploy
 
-Ships a directory or a single file to the server, then prints the URL and nothing else, so a script can capture it. If the slug is taken, the server picks a new one, so trust the printed URL over the slug you asked for.
+Ships a directory or a single file to the server, then prints the URL and nothing else, so a script can capture it. If the slug is taken, the server picks a new one unless you pass `--replace`. Trust the printed URL over the slug you asked for.
 
-| Flag        | Required | Description                                                          |
-| ----------- | :------: | -------------------------------------------------------------------- |
-| `--project` |    ✔     | First URL path segment.                                              |
-| `--slug`    |          | Second URL path segment. Default: a random UUID.                     |
-| `--auth`    |          | `user:pass` required to view this deploy, via a sign-in page.        |
-| `--expires` |          | Days until the deploy is deleted. `0` keeps it forever. Default: 30. |
-| `--host`    |   ✔\*    | Server URL.                                                          |
-| `--token`   |   ✔\*    | A deploy token.                                                      |
+| Flag | Required | Description |
+| --- | :-: | --- |
+| `--project` | ✔ | First URL path segment. |
+| `--slug` |  | Second URL path segment. Default: a random UUID. |
+| `--replace` |  | Replace all files at `--slug`, or create it if absent. Requires `--slug`. |
+| `--auth` |  | Complete `user:pass` pair required to view this deploy, via a sign-in page. Preserved on replacement when omitted. |
+| `--expires` |  | Days until the deploy is deleted. `0` keeps it forever. Default: 30 for a new deploy; preserved on replacement when omitted. |
+| `--host` | ✔\* | Server URL. |
+| `--token` | ✔\* | A deploy token. |
 
 \* The `BURROW_HOST` and `BURROW_TOKEN` env vars satisfy these; a flag wins when both are set.
 
 The server slugifies names: `"My Report"` becomes `my-report`. A deployed `index.html` serves at the slug root; any other single file serves at its own name.
 
-A protected deploy shows a sign-in page. A correct sign-in sets a cookie for that deploy only, good for 30 days on that device; a server restart signs viewers out.
+A protected deploy shows a sign-in page. A correct sign-in sets a cookie for that deploy only, good for 30 days on that device. A server restart or a change to that deploy's credentials signs viewers out.
 
 ```sh
 # password-protected, gone in 7 days
@@ -48,6 +49,16 @@ burrow deploy ./coverage --project ci --slug pr-123 --auth me:secret --expires 7
 # a single file, kept forever
 burrow deploy report.html --project docs --expires 0
 ```
+
+To update a document at the same URL, use an explicit slug and `--replace`:
+
+```sh
+burrow deploy notes.md --project docs --slug notes --replace
+```
+
+The same command creates the deploy if it does not exist. Replacement removes all old files, including files absent from the new upload. For a single file, keep its filename unchanged to preserve the full URL. A failed upload leaves the existing deploy intact. There is no version history or rollback.
+
+When you omit `--auth` or `--expires`, replacement preserves that setting. The expiration countdown restarts after replacement; permanent deploys stay permanent. To change credentials, supply the complete `user:pass` pair. Partial or empty credentials are rejected. Content updates retain existing viewer sessions unless the credentials change.
 
 ### burrow readme
 

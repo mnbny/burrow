@@ -4,16 +4,18 @@
 
 The system is one Node server that accepts deploys and serves the deployed files. The server runs as a Docker container on the owner's NAS behind Nginx Proxy Manager. The container copies only the committed server bundle, so the image installs nothing. The proxy owns the public domain and TLS. The server uses plain HTTP on an internal port.
 
-The server stores deployed content on a mounted volume, organized by project and then by slug. A deploy uploads a gzipped tarball of a directory. Deploys are immutable: the server never replaces an existing slug, and a taken slug receives a unique suffix. The server also normalizes the project and the slug into URL-safe names, generates the slug when a deploy does not send one, and holds the default expiration, so every client gets the same naming and lifetime. The response carries the final path, and the CLI prints the URL from that response.
+The server stores deployed content on a mounted volume, organized by project and then by slug. A deploy uploads a gzipped tarball of a directory. By default, a taken slug receives a unique suffix and the existing deploy stays unchanged. Explicit replacement requires a named slug and replaces all files there, or creates the deploy if that slug is absent. The server normalizes the project and slug into URL-safe names. It also generates omitted slugs and supplies the default expiration, so every client uses the same naming and lifetime rules. The response carries the final path, and the CLI prints the URL from that response.
 
 Deploys are ephemeral. Each deploy carries a hidden metadata file with its deploy time, its expiration time, and its optional credentials. A sweep at server start, and once each hour after, deletes every deploy past its expiration. A deploy may opt out of expiration.
 
-A deploy extracts into an unservable staging area, and publishing is one atomic rename. A partial deploy, an unauthenticated window, or a collision between concurrent deploys is therefore not possible: the rename fails on a taken slug and the deploy retries with a unique suffix.
+Replacement preserves the existing credentials and expiration policy unless the deploy supplies a new value for that setting. Replacement restarts the expiration countdown; a deploy without expiration remains permanent. Credentials change as a complete username and password pair. Replacement retains no previous versions.
+
+A deploy extracts into an unservable staging area. The server publishes only after the files and metadata are ready. Publication uses synchronous filesystem changes, so requests and other deploys cannot observe an incomplete replacement. If publication fails, the server restores the existing deploy. Concurrent replacements finish in publication order and inherit omitted settings from the latest deploy. Downloads already in progress retain their original files.
 
 ## Authentication
 
 - A deploy requires a bearer token. The container environment supplies the valid tokens in one comma-separated variable at start. There is no token management at runtime.
-- A deploy may attach viewing credentials. The server stores them in the hidden metadata file inside the slug directory. A read of that slug without a session gets a sign-in page on navigation and a bare refusal otherwise. A correct sign-in sets a signed session cookie scoped to that slug alone.
+- A deploy may attach viewing credentials. The server stores them in the hidden metadata file inside the slug directory. A read of that slug without a session gets a sign-in page on navigation and a bare refusal otherwise. A correct sign-in sets a signed session cookie scoped to that slug and its credentials. A credential change invalidates existing sessions; a content replacement with unchanged credentials preserves them.
 - Sign-in reports invalid credentials in a dismissible toast outside the form. Without JavaScript, the message stays visible and the form still works.
 - The session signing key lives only in process memory, so there is nothing to store or leak and a restart signs every viewer out. Credential and token comparisons are timing safe.
 - The server never serves a hidden file (a name that starts with a dot). This rule also protects the stored credentials.
@@ -51,7 +53,7 @@ A release publishes the server image to a container registry with a moving lates
 
 ## Testing
 
-One end-to-end harness verifies the host. The harness builds the real container, puts a small nginx proxy in front of it as a stand-in for Nginx Proxy Manager, deploys fixture files with the real CLI, and checks the served responses: token rejection, basic auth, content and asset types, hidden files, traversal, redirects, slug conflicts, slug normalization, expiration, concurrent deploys to one slug, decompression bombs, dropped uploads, and hostile metadata and expiration input. The harness is sandboxed: it binds only to localhost, exposes the app only through the proxy, and removes every container and network on exit.
+One end-to-end harness verifies the host. The harness builds the real container, puts a small nginx proxy in front of it as a stand-in for Nginx Proxy Manager, deploys fixture files with the real CLI, and checks the served responses: token rejection, basic auth, content and asset types, hidden files, traversal, redirects, slug conflicts, slug normalization, expiration, concurrent deploys to one slug, decompression bombs, dropped uploads, and hostile metadata and expiration input. Replacement checks cover complete file replacement, retained settings, expiration renewal, credential changes, failed uploads, concurrent replacements, and downloads in progress. The harness is sandboxed: it binds only to localhost, exposes the app only through the proxy, and removes every container and network on exit.
 
 The same harness uses Playwright and Chromium to check Markdown views, URL navigation, original downloads, sign-in, sanitization, relative assets, and mobile layout. It also checks that the viewer works with external requests blocked and that downloads work without JavaScript.
 

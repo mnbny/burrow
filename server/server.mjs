@@ -60,14 +60,17 @@ const readMeta = dir => JSON.parse(fs.readFileSync(path.join(dir, '.meta.json'),
 // restart signs everyone out rather than persisting a secret anywhere.
 const SECRET = randomBytes(32)
 const COOKIE = 'mb_burrow'
-const sessionToken = slugKey => createHmac('sha256', SECRET).update(slugKey).digest('base64url')
+const sessionToken = (slugKey, auth) =>
+  createHmac('sha256', SECRET)
+    .update(JSON.stringify([slugKey, auth]))
+    .digest('base64url')
 
 // Hashing both sides first permits a timing-safe compare of unequal lengths.
 const safeEqual = (a, b) =>
   timingSafeEqual(createHash('sha256').update(a).digest(), createHash('sha256').update(b).digest())
 
-const hasSession = (req, slugKey) => {
-  const token = sessionToken(slugKey)
+const hasSession = (req, slugKey, auth) => {
+  const token = sessionToken(slugKey, auth)
   return (req.headers.cookie || '')
     .split(/;\s*/)
     .some(c => c.startsWith(`${COOKIE}=`) && safeEqual(c.slice(COOKIE.length + 1), token))
@@ -137,10 +140,12 @@ function deploy(req, res, urlPath) {
   const token = (req.headers.authorization || '').replace('Bearer ', '')
   if (!TOKENS.includes(token)) return end(res, 401, 'bad token')
 
+  const replace = req.headers['x-replace'] === '1'
   let project, preferred
   try {
     const [rawProject, rawSlug, extra] = urlPath.slice('/_deploy/'.length).split('/')
     if (!rawProject || extra) return end(res, 400, 'bad project/slug')
+    if (replace && !rawSlug) return end(res, 400, 'replace requires a slug')
     project = kebabCase(decodeURIComponent(rawProject))
     preferred = rawSlug ? kebabCase(decodeURIComponent(rawSlug)) : randomUUID()
   } catch {
@@ -148,14 +153,17 @@ function deploy(req, res, urlPath) {
   }
   if (!SEGMENT.test(project) || !SEGMENT.test(preferred)) return end(res, 400, 'bad project/slug')
 
-  const days = Number(req.headers['x-expires'] ?? 30)
+  const days = req.headers['x-expires'] === undefined ? undefined : Number(req.headers['x-expires'])
   // The upper bound keeps the computed timestamp inside the valid Date range.
-  if (!Number.isFinite(days) || days < 0 || days > 36_500) return end(res, 400, 'bad expiration')
+  if (days !== undefined && (!Number.isFinite(days) || days < 0 || days > 36_500))
+    return end(res, 400, 'bad expiration')
+  const auth = req.headers['x-auth']
+  if (auth !== undefined && !/^[^:\r\n]+:[^\r\n]+$/.test(auth)) return end(res, 400, 'bad auth: expected user:pass')
 
   if (Number(req.headers['content-length']) > MAX_BODY) return end(res, 413, 'too large')
 
-  // Extraction happens in an unservable staging directory and publishing is one
-  // atomic rename, so a partial or unauthenticated deploy is never visible.
+  // Extraction happens in an unservable staging directory. The existing deploy
+  // stays available until the replacement and its metadata are ready.
   const staging = path.join(ROOT, '.staging', randomUUID())
   fs.mkdirSync(staging, { recursive: true })
 
@@ -203,27 +211,58 @@ function deploy(req, res, urlPath) {
       if (code !== 0) return fail(400, 'extract failed')
       scrub(staging)
 
+      const destination = path.join(ROOT, project, preferred)
+      // Read settings at publication time so concurrent replacements inherit
+      // the latest settings, rather than those present when the upload began.
+      const previous = replace && fs.existsSync(destination) ? readMeta(destination) : undefined
+      let lifetime = days ?? 30
+      if (days === undefined && previous) {
+        lifetime = previous.expiresAt
+          ? (Date.parse(previous.expiresAt) - Date.parse(previous.deployedAt)) / 86_400_000
+          : 0
+      }
+      const now = Date.now()
       const meta = {
-        deployedAt: new Date().toISOString(),
-        expiresAt: days ? new Date(Date.now() + days * 86_400_000).toISOString() : null,
+        deployedAt: new Date(now).toISOString(),
+        expiresAt: lifetime ? new Date(now + lifetime * 86_400_000).toISOString() : null,
         requestedSlug: preferred,
       }
-      const auth = req.headers['x-auth']
-      if (auth) meta.auth = auth
+      const credentials = auth ?? previous?.auth
+      if (credentials) meta.auth = credentials
       const metaFile = path.join(staging, '.meta.json')
       // The payload may have shipped this name, even as a directory.
       fs.rmSync(metaFile, { recursive: true, force: true })
       fs.writeFileSync(metaFile, JSON.stringify(meta))
 
-      // The rename fails on a non-empty target, which makes it the atomic
-      // "slug is taken" check; deploys are immutable, so take a suffix instead.
       fs.mkdirSync(path.join(ROOT, project), { recursive: true })
       let slug = preferred
-      try {
-        fs.renameSync(staging, path.join(ROOT, project, slug))
-      } catch {
-        slug = `${preferred}-${randomUUID()}`
-        fs.renameSync(staging, path.join(ROOT, project, slug))
+      if (previous) {
+        const backup = path.join(ROOT, '.staging', randomUUID())
+        // Synchronous renames cannot interleave with reads or another publish
+        // in this server. Keep the old directory until the new one is in place.
+        fs.renameSync(destination, backup)
+        try {
+          fs.renameSync(staging, destination)
+        } catch (error) {
+          fs.renameSync(backup, destination)
+          throw error
+        }
+        try {
+          fs.rmSync(backup, { recursive: true, force: true })
+        } catch (error) {
+          // Publishing succeeded; the staging sweep can retry this cleanup.
+          console.error('replacement cleanup failed:', error)
+        }
+      } else {
+        try {
+          fs.renameSync(staging, destination)
+        } catch (error) {
+          // Only normal deploys take a suffix on collision. Replacement must
+          // either publish at the requested URL or fail.
+          if (replace || !['ENOTEMPTY', 'EEXIST'].includes(error.code)) throw error
+          slug = `${preferred}-${randomUUID()}`
+          fs.renameSync(staging, path.join(ROOT, project, slug))
+        }
       }
       end(res, 200, `/${project}/${slug}/`)
     } catch {
@@ -256,7 +295,7 @@ function serve(req, res, urlPath, search) {
       // The sweep can remove the slug mid-request.
       return end(res, 404, 'not found')
     }
-    if (expected && !hasSession(req, `${parts[0]}/${parts[1]}`)) {
+    if (expected && !hasSession(req, `${parts[0]}/${parts[1]}`, expected)) {
       // A navigation gets the sign-in page; an asset or script gets a bare 401.
       if (req.method === 'GET' && (req.headers.accept || '').includes('text/html')) return loginPage(res, false)
       return end(res, 401, 'auth required')
@@ -301,9 +340,11 @@ function serve(req, res, urlPath, search) {
       res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${name}`)
     }
   }
+  // Open before yielding so a replacement cannot change the file between its
+  // authorization check and the stream's otherwise asynchronous open.
+  const stream = req.method === 'HEAD' ? null : fs.createReadStream(file, { fd: fs.openSync(file, 'r') })
   res.writeHead(200, { 'Content-Type': contentType })
-  if (req.method === 'HEAD') return res.end()
-  const stream = fs.createReadStream(file)
+  if (!stream) return res.end()
   stream.on('error', () => res.destroy())
   stream.pipe(res)
 }
@@ -341,7 +382,7 @@ function login(req, res, urlPath, search) {
       res.writeHead(303, {
         // A single leading slash keeps redirects local for //-prefixed requests.
         Location: urlPath.replace(/^\/+/, '/') + (search.size ? `?${search}` : ''),
-        'Set-Cookie': `${COOKIE}=${sessionToken(slugKey)}; Path=/${slugKey}; Max-Age=2592000; HttpOnly; SameSite=Lax`,
+        'Set-Cookie': `${COOKIE}=${sessionToken(slugKey, expected)}; Path=/${slugKey}; Max-Age=2592000; HttpOnly; SameSite=Lax`,
       })
       res.end()
     } catch {

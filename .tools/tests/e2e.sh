@@ -116,6 +116,10 @@ if ! node viewer.mjs "$url2" "$HOST/reports/smoke/"; then
   check "Markdown browser checks" passed failed
 fi
 
+if ! node replace.mjs "$HOST"; then
+  check "replacement checks" passed failed
+fi
+
 check "oversized expiration is rejected" 400 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'Authorization: Bearer test-token' -H 'x-expires: 1e9' --data-binary @/dev/null "$HOST/_deploy/reports/overflow")"
 
 # A payload shipping .meta.json as a directory must not crash the server.

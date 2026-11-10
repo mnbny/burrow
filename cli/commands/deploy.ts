@@ -22,6 +22,10 @@ export default defineCommand({
       description: 'Second URL path segment, slugified by the server (default: server picks a UUID)',
       type: 'string',
     },
+    replace: {
+      description: 'Replace all files at --slug, preserving omitted auth and expiration settings',
+      type: 'boolean',
+    },
     auth: { description: 'user:pass basic auth required to view this deploy', type: 'string' },
     expires: {
       description: 'Days until the deploy is deleted; 0 keeps it forever (server default: 30)',
@@ -36,6 +40,9 @@ export default defineCommand({
 
     if (!host) fail('Set BURROW_HOST or pass --host.')
     if (!token) fail('Set BURROW_TOKEN or pass --token.')
+    if (args.replace && !args.slug) fail('--replace requires --slug.')
+    if (args.auth !== undefined && !/^[^:\r\n]+:[^\r\n]+$/.test(args.auth))
+      fail('--auth must be a complete user:pass pair.')
 
     const target = await stat(args.dir).catch(() => null)
     if (!target?.isDirectory() && !target?.isFile()) fail(`Not a directory or file: ${args.dir}`)
@@ -58,6 +65,7 @@ export default defineCommand({
       duplex: 'half',
       headers: {
         authorization: `Bearer ${token}`,
+        ...(args.replace ? { 'x-replace': '1' } : {}),
         ...(expires !== undefined ? { 'x-expires': String(expires) } : {}),
         ...(args.auth ? { 'x-auth': args.auth } : {}),
       },
