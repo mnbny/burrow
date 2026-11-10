@@ -8,7 +8,7 @@ The server stores deployed content on a mounted volume, organized by project and
 
 Deploys are ephemeral. Each deploy carries a hidden metadata file with its deploy time, its expiration time, and its optional credentials. A sweep at server start, and once each hour after, deletes every deploy past its expiration. A deploy may opt out of expiration.
 
-Replacement preserves the existing credentials and expiration policy unless the deploy supplies a new value for that setting. Replacement restarts the expiration countdown; a deploy without expiration remains permanent. Credentials change as a complete username and password pair. Replacement retains no previous versions.
+Replacement preserves the existing credentials and expiration date unless the deploy supplies a new value for that setting. An explicit expiration value starts a new countdown from replacement; a deploy without expiration remains permanent when the value is omitted. Credentials change as a complete username and password pair. Replacement retains no previous versions.
 
 A deploy extracts into an unservable staging area. The server publishes only after the files and metadata are ready. Publication uses synchronous filesystem changes, so requests and other deploys cannot observe an incomplete replacement. If publication fails, the server restores the existing deploy. Concurrent replacements finish in publication order and inherit omitted settings from the latest deploy. Downloads already in progress retain their original files.
 
@@ -53,7 +53,7 @@ A release publishes the server image to a container registry with a moving lates
 
 ## Testing
 
-One end-to-end harness verifies the host. The harness builds the real container, puts a small nginx proxy in front of it as a stand-in for Nginx Proxy Manager, deploys fixture files with the real CLI, and checks the served responses: token rejection, basic auth, content and asset types, hidden files, traversal, redirects, slug conflicts, slug normalization, expiration, concurrent deploys to one slug, decompression bombs, dropped uploads, and hostile metadata and expiration input. Replacement checks cover complete file replacement, retained settings, expiration renewal, credential changes, failed uploads, concurrent replacements, and downloads in progress. The harness is sandboxed: it binds only to localhost, exposes the app only through the proxy, and removes every container and network on exit.
+One end-to-end harness verifies the host. The harness builds the real container, puts a small nginx proxy in front of it as a stand-in for Nginx Proxy Manager, deploys fixture files with the real CLI, and checks the served responses: token rejection, basic auth, content and asset types, hidden files, traversal, redirects, slug conflicts, slug normalization, expiration, concurrent deploys to one slug, decompression bombs, dropped uploads, and hostile metadata and expiration input. Replacement checks cover complete file replacement, retained settings, unchanged expiration dates, explicit expiration renewal, credential changes, failed uploads, concurrent replacements, and downloads in progress. The harness is sandboxed: it binds only to localhost, exposes the app only through the proxy, and removes every container and network on exit.
 
 The same harness uses Playwright and Chromium to check Markdown views, URL navigation, original downloads, sign-in, sanitization, relative assets, and mobile layout. It also checks that the viewer works with external requests blocked and that downloads work without JavaScript.
 

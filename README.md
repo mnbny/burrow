@@ -32,7 +32,7 @@ Ships a directory or a single file to the server, then prints the URL and nothin
 | `--slug` |  | Second URL path segment. Default: a random UUID. |
 | `--replace` |  | Replace all files at `--slug`, or create it if absent. Requires `--slug`. |
 | `--auth` |  | Complete `user:pass` pair required to view this deploy, via a sign-in page. Preserved on replacement when omitted. |
-| `--expires` |  | Days until the deploy is deleted. `0` keeps it forever. Default: 30 for a new deploy; preserved on replacement when omitted. |
+| `--expires` |  | Days from this deploy until deletion. `0` keeps it forever. Default: 30 for a new deploy; the existing expiration date stays unchanged on replacement when omitted. |
 | `--host` | ✔\* | Server URL. |
 | `--token` | ✔\* | A deploy token. |
 
@@ -58,7 +58,9 @@ burrow deploy notes.md --project docs --slug notes --replace
 
 The same command creates the deploy if it does not exist. Replacement removes all old files, including files absent from the new upload. For a single file, keep its filename unchanged to preserve the full URL. A failed upload leaves the existing deploy intact. There is no version history or rollback.
 
-When you omit `--auth` or `--expires`, replacement preserves that setting. The expiration countdown restarts after replacement; permanent deploys stay permanent. To change credentials, supply the complete `user:pass` pair. Partial or empty credentials are rejected. Content updates retain existing viewer sessions unless the credentials change.
+When you omit `--expires`, replacement preserves the existing expiration date; permanent deploys stay permanent. A 30-day deploy replaced after 15 days still has 15 days left. Supply `--expires 30` to start a new 30-day countdown from replacement.
+
+When you omit `--auth`, replacement preserves the existing credentials. To change credentials, supply the complete `user:pass` pair. Partial or empty credentials are rejected. Content updates retain existing viewer sessions unless the credentials change.
 
 ### burrow readme
 

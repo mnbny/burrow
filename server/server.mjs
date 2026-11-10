@@ -215,16 +215,12 @@ function deploy(req, res, urlPath) {
       // Read settings at publication time so concurrent replacements inherit
       // the latest settings, rather than those present when the upload began.
       const previous = replace && fs.existsSync(destination) ? readMeta(destination) : undefined
-      let lifetime = days ?? 30
-      if (days === undefined && previous) {
-        lifetime = previous.expiresAt
-          ? (Date.parse(previous.expiresAt) - Date.parse(previous.deployedAt)) / 86_400_000
-          : 0
-      }
       const now = Date.now()
+      let expiresAt = days === 0 ? null : new Date(now + (days ?? 30) * 86_400_000).toISOString()
+      if (days === undefined && previous) expiresAt = previous.expiresAt
       const meta = {
         deployedAt: new Date(now).toISOString(),
-        expiresAt: lifetime ? new Date(now + lifetime * 86_400_000).toISOString() : null,
+        expiresAt,
         requestedSlug: preferred,
       }
       const credentials = auth ?? previous?.auth

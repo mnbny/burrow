@@ -74,9 +74,25 @@ try {
   await writeFile(path.join(second, '.meta.json'), '{"auth":"attacker:password","expiresAt":null}')
 
   const args = ['--slug', 'notes', '--replace']
-  assert.equal(await cli(first, [...args, '--auth', 'alice:secret', '--expires', '7']), root)
+  assert.equal(await cli(first, [...args, '--auth', 'alice:secret', '--expires', '30']), root)
   const before = await metadata('notes')
-  assert.equal(lifetime(before), 7 * day)
+  assert.equal(lifetime(before), 30 * day)
+  // Model a 30-day deploy that was published 15 days ago.
+  before.deployedAt = new Date(Date.parse(before.deployedAt) - 15 * day).toISOString()
+  before.expiresAt = new Date(Date.parse(before.expiresAt) - 15 * day).toISOString()
+  await run('docker', [
+    'compose',
+    '-f',
+    composePath,
+    'exec',
+    '-T',
+    'app',
+    'node',
+    '-e',
+    'require("node:fs").writeFileSync(process.argv[1], process.argv[2])',
+    '/data/replacement/notes/.meta.json',
+    JSON.stringify(before),
+  ])
   const signedIn = await login('alice', 'secret')
   assert.equal(signedIn.status, 303)
   const cookie = signedIn.headers.get('set-cookie').split(';')[0]
@@ -88,15 +104,22 @@ try {
   assert.equal(await contents(`${root}new.txt`, cookie), 'new asset')
   const after = await metadata('notes')
   assert.equal(after.auth, 'alice:secret')
-  assert.equal(lifetime(after), 7 * day)
-  assert(Date.parse(after.expiresAt) > Date.parse(before.expiresAt), 'Replacement restarts the expiration countdown')
-  console.log('ok: replacement keeps its URL, removes old files, and preserves auth, sessions, and lifetime')
+  assert.equal(after.expiresAt, before.expiresAt, 'Omitting --expires preserves the original expiration date')
+  assert(Date.parse(after.deployedAt) > Date.parse(before.deployedAt))
+  console.log('ok: replacement keeps its URL, removes old files, and preserves auth, sessions, and expiration date')
 
   assert.equal(await cli(path.join(second, 'report.md'), args), `${root}report.md`)
   assert.equal(await status(`${root}new.txt`, cookie), 404)
   assert.equal(await contents(`${root}report.md?raw=1`, cookie), '# Second version\n')
   assert.equal(await contents(`${root}report.md?download=1`, cookie), '# Second version\n')
+  assert.equal((await metadata('notes')).expiresAt, before.expiresAt)
   console.log('ok: single-file replacement replaces the entire deploy and serves updated Markdown at the same URL')
+
+  await cli(second, [...args, '--expires', '30'])
+  const renewed = await metadata('notes')
+  assert.equal(lifetime(renewed), 30 * day)
+  assert(Date.parse(renewed.expiresAt) > Date.parse(before.expiresAt))
+  console.log('ok: an explicit --expires 30 starts a new 30-day countdown')
 
   await cli(first, [...args, '--auth', 'bob:new:secret', '--expires', '0'])
   assert.equal(await status(`${root}report.md`, cookie), 401)
@@ -110,9 +133,11 @@ try {
   assert.equal((await metadata('notes')).expiresAt, null)
   assert.equal(await contents(`${root}report.md`, newCookie), '# Second version\n')
   await cli(second, [...args, '--expires', '2'])
-  assert.equal((await metadata('notes')).auth, 'bob:new:secret')
+  const overridden = await metadata('notes')
+  assert.equal(overridden.auth, 'bob:new:secret')
+  assert.equal(lifetime(overridden), 2 * day)
   await cli(second, [...args, '--auth', 'carol:secret'])
-  assert.equal(lifetime(await metadata('notes')), 2 * day)
+  assert.equal((await metadata('notes')).expiresAt, overridden.expiresAt)
   console.log(
     'ok: explicit settings override, permanent lifetime survives, and changed credentials revoke old sessions',
   )
@@ -159,6 +184,7 @@ try {
   assert.deepEqual(await metadata('notes'), intact)
   console.log('ok: invalid settings, failed archives, and interrupted replacements leave the old deploy available')
 
+  const concurrentStart = Date.now()
   const results = await Promise.all([
     cli(first, [...args, '--auth', 'latest:password', '--expires', '3']),
     cli(second, args),
@@ -166,7 +192,8 @@ try {
   assert.deepEqual(results, [root, root])
   const concurrent = await metadata('notes')
   assert.equal(concurrent.auth, 'latest:password')
-  assert.equal(lifetime(concurrent), 3 * day)
+  assert(Date.parse(concurrent.expiresAt) >= concurrentStart + 3 * day)
+  assert(Date.parse(concurrent.expiresAt) <= Date.now() + 3 * day)
   const concurrentSignIn = await login('latest', 'password')
   assert.equal(concurrentSignIn.status, 303)
   const concurrentCookie = concurrentSignIn.headers.get('set-cookie').split(';')[0]

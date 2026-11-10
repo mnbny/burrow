@@ -23,12 +23,12 @@ export default defineCommand({
       type: 'string',
     },
     replace: {
-      description: 'Replace all files at --slug, preserving omitted auth and expiration settings',
+      description: 'Replace all files at --slug; keep existing auth and expiry unless supplied',
       type: 'boolean',
     },
     auth: { description: 'user:pass basic auth required to view this deploy', type: 'string' },
     expires: {
-      description: 'Days until the deploy is deleted; 0 keeps it forever (server default: 30)',
+      description: 'Days from this deploy until deletion; 0 keeps it forever (new deploy default: 30)',
       type: 'string',
     },
     host: { description: 'Server URL (overrides BURROW_HOST)', type: 'string' },
