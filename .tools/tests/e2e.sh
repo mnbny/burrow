@@ -5,6 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 HOST=http://127.0.0.1:18199
+CLI_VERSION=$(node -p "require('../../package.json').version")
 export BURROW_HOST=$HOST BURROW_TOKEN=test-token HIDE_FOOTER=0
 
 compose() { docker compose -f compose.yml "$@"; }
@@ -37,6 +38,15 @@ check() {
   fi
 }
 
+if ! node compatibility.mjs "$HOST"; then
+  check "CLI compatibility checks" passed failed
+fi
+
+# Build already ran before this harness; check the same bundle through its npm package.
+if ! (cd ../.. && pnpm exec tsx .tools/scripts/pack-check.ts "$HOST"); then
+  check "npm package checks" passed failed
+fi
+
 url=$(cli fixtures --project reports --slug smoke --auth me:secret)
 check "deploy prints the url" "$HOST/reports/smoke/" "$url"
 jar=$(mktemp)
@@ -62,7 +72,6 @@ else
   check "bad token is rejected" rejected rejected
 fi
 
-# Flags beat env vars: bad env, correct flags.
 urlflag=$(BURROW_HOST=http://127.0.0.1:1 BURROW_TOKEN=bad cli fixtures --project reports --host "$HOST" --token test-token)
 check "host and token flags override env" 200 "$(code "$urlflag")"
 
@@ -120,7 +129,11 @@ if ! node replace.mjs "$HOST"; then
   check "replacement checks" passed failed
 fi
 
-check "oversized expiration is rejected" 400 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'Authorization: Bearer test-token' -H 'x-expires: 1e9' --data-binary @/dev/null "$HOST/_deploy/reports/overflow")"
+if ! compose exec -T app node --input-type=module - "$CLI_VERSION" < upload.mjs; then
+  check "upload completion checks" passed failed
+fi
+
+check "oversized expiration is rejected" 400 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'Authorization: Bearer test-token' -H "x-burrow-version: $CLI_VERSION" -H 'x-expires: 1e9' --data-binary @/dev/null "$HOST/_deploy/reports/overflow")"
 
 # A payload shipping .meta.json as a directory must not crash the server.
 evildir=$(mktemp -d)
@@ -130,7 +143,6 @@ urldirmeta=$(cli "$evildir" --project reports --slug dir-meta)
 rm -rf "$evildir"
 check "metadata directory payload is survived" 200 "$(code "$urldirmeta")"
 
-# Concurrent deploys to one slug must land on two distinct URLs.
 ca=$(mktemp) cb=$(mktemp)
 cli fixtures --project reports --slug clash > "$ca" &
 cli fixtures --project reports --slug clash > "$cb" &
@@ -171,12 +183,12 @@ bombdir=$(mktemp -d)
 dd if=/dev/zero of="$bombdir/big" bs=1048576 count=600 2> /dev/null
 tar -czf "$bombdir/bomb.tgz" -C "$bombdir" big
 rm "$bombdir/big"
-check "decompression bomb is rejected" 413 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'Authorization: Bearer test-token' --data-binary "@$bombdir/bomb.tgz" "$HOST/_deploy/reports/bomb")"
+check "decompression bomb is rejected" 413 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'Authorization: Bearer test-token' -H "x-burrow-version: $CLI_VERSION" --data-binary "@$bombdir/bomb.tgz" "$HOST/_deploy/reports/bomb")"
 rm -rf "$bombdir"
 
 slow=$(mktemp)
 dd if=/dev/urandom of="$slow" bs=1048576 count=8 2> /dev/null
-curl -s -o /dev/null -m 1 --limit-rate 100K -X PUT -H 'Authorization: Bearer test-token' --data-binary "@$slow" "$HOST/_deploy/reports/aborted" || true
+curl -s -o /dev/null -m 1 --limit-rate 100K -X PUT -H 'Authorization: Bearer test-token' -H "x-burrow-version: $CLI_VERSION" --data-binary "@$slow" "$HOST/_deploy/reports/aborted" || true
 rm -f "$slow"
 sleep 1
 staging_left=$(compose exec -T app sh -c 'ls /data/.staging 2>/dev/null | wc -l' | tr -d '[:space:]')
@@ -185,7 +197,7 @@ check "aborted upload leaves no staging garbage" 0 "$staging_left"
 # The compressed body is capped at 50MB.
 big=$(mktemp)
 dd if=/dev/urandom bs=1048576 count=51 of="$big" 2> /dev/null
-check "oversized upload is rejected" 413 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'Authorization: Bearer test-token' --data-binary "@$big" "$HOST/_deploy/reports/too-big")"
+check "oversized upload is rejected" 413 "$(curl -s -o /dev/null -w '%{http_code}' -X PUT -H 'Authorization: Bearer test-token' -H "x-burrow-version: $CLI_VERSION" --data-binary "@$big" "$HOST/_deploy/reports/too-big")"
 rm -f "$big"
 
 # Expiration: the sweep runs at server start, so an expired deploy vanishes

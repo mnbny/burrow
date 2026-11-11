@@ -1,6 +1,8 @@
 import { spawnSync } from 'node:child_process'
 import process from 'node:process'
 
+import manifest from '../../package.json' with { type: 'json' }
+
 // The NAS is x86_64 and the build machine is ARM, so the platform is pinned.
 const PLATFORM = 'linux/amd64'
 const REPO = process.env['BURROW_IMAGE'] ?? 'ghcr.io/mnbny/burrow'
@@ -38,17 +40,10 @@ if (capture('git', ['status', '--porcelain']) !== '') {
 }
 
 const sha = capture('git', ['rev-parse', '--short', 'HEAD'])
+const tags = [`${REPO}:latest`, `${REPO}:${sha}`]
+// Only a named release owns the version tag; image-only commits keep their SHA tag.
+if (capture('git', ['tag', '--points-at', 'HEAD', '--list', `v${manifest.version}`]))
+  tags.push(`${REPO}:${manifest.version}`)
 
-run('docker', [
-  'buildx',
-  'build',
-  '--platform',
-  PLATFORM,
-  '-t',
-  `${REPO}:latest`,
-  '-t',
-  `${REPO}:${sha}`,
-  '--push',
-  '.',
-])
-console.log(`Pushed ${REPO}:latest and ${REPO}:${sha}`)
+run('docker', ['buildx', 'build', '--platform', PLATFORM, ...tags.flatMap(tag => ['-t', tag]), '--push', '.'])
+console.log(`Pushed ${tags.join(', ')}`)

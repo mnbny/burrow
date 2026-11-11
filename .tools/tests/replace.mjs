@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
 import http from 'node:http'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 import { gzipSync } from 'node:zlib'
+
+import manifest from '../../package.json' with { type: 'json' }
 
 const [host] = process.argv.slice(2)
 assert(host, 'Pass the test server URL.')
@@ -46,7 +48,7 @@ const login = (username, password) =>
 const upload = (endpoint, headers, body = '') =>
   fetch(`${host}/_deploy/${endpoint}`, {
     method: 'PUT',
-    headers: { authorization: `Bearer ${token}`, 'x-replace': '1', ...headers },
+    headers: { authorization: `Bearer ${token}`, 'x-burrow-version': manifest.version, 'x-replace': '1', ...headers },
     body,
   })
 const contents = async (url, cookie) => {
@@ -77,7 +79,6 @@ try {
   assert.equal(await cli(first, [...args, '--auth', 'alice:secret', '--expires', '30']), root)
   const before = await metadata('notes')
   assert.equal(lifetime(before), 30 * day)
-  // Model a 30-day deploy that was published 15 days ago.
   before.deployedAt = new Date(Date.parse(before.deployedAt) - 15 * day).toISOString()
   before.expiresAt = new Date(Date.parse(before.expiresAt) - 15 * day).toISOString()
   await run('docker', [
@@ -168,11 +169,65 @@ try {
   const currentCookie = currentSignIn.headers.get('set-cookie').split(';')[0]
   assert.equal(await contents(`${root}report.md`, currentCookie), '# Second version\n')
 
+  // A valid archive followed by tar failure must never reach the server.
+  const bin = path.join(temp, 'bin')
+  const scratch = path.join(temp, 'scratch')
+  await mkdir(bin)
+  await mkdir(scratch)
+  const archiveEnv = {
+    ...process.env,
+    BURROW_HOST: host,
+    BURROW_TOKEN: token,
+    TMPDIR: scratch,
+    // Keep the source launcher's cache out of the archive-cleanup assertion.
+    TSX_DISABLE_CACHE: '1',
+  }
+  const { stdout: realTar } = await run('sh', ['-c', 'command -v tar'])
+  await writeFile(
+    path.join(bin, 'tar'),
+    `#!${process.execPath}\nrequire('node:child_process').execFileSync(${JSON.stringify(realTar.trim())}, process.argv.slice(2), { stdio: 'inherit' }); process.exit(1)\n`,
+    { mode: 0o700 },
+  )
+  for (const launcher of [cliPath, bundlePath]) {
+    for (const searchPath of [`${bin}${path.delimiter}${process.env.PATH}`, scratch]) {
+      await assert.rejects(
+        run(process.execPath, [launcher, 'deploy', first, '--project', 'replacement', ...args], {
+          env: { ...archiveEnv, PATH: searchPath },
+        }),
+        error => error.code === 1 && /tar/i.test(error.stderr) && error.stdout === '',
+      )
+      assert.deepEqual(await metadata('notes'), intact)
+      assert.equal(await contents(`${root}report.md`, currentCookie), '# Second version\n')
+      assert.deepEqual(await readdir(scratch), [], 'Failed archives must be cleaned up')
+    }
+    for (const [uploadHost, uploadToken] of [
+      [host, 'wrong-token'],
+      ['http://127.0.0.1:1', token],
+    ]) {
+      await assert.rejects(
+        run(process.execPath, [launcher, 'deploy', first, '--project', 'replacement', ...args], {
+          env: { ...archiveEnv, BURROW_HOST: uploadHost, BURROW_TOKEN: uploadToken },
+        }),
+        error => error.code === 1 && /Deploy failed|Could not upload/.test(error.stderr) && error.stdout === '',
+      )
+      assert.deepEqual(await metadata('notes'), intact)
+      assert.deepEqual(await readdir(scratch), [], 'Failed uploads must clean up their archive')
+    }
+    await run(
+      process.execPath,
+      [launcher, 'deploy', first, '--project', 'replacement', '--slug', 'cleanup', '--replace'],
+      { env: archiveEnv },
+    )
+    assert.deepEqual(await readdir(scratch), [], 'Successful uploads must clean up their archive')
+  }
+  console.log('ok: tar and upload failures preserve the live deploy; temporary archives are always removed')
+
   const { stdout: archive } = await run('tar', ['-cz', '-C', first, '.'], { encoding: 'buffer' })
   const interrupted = http.request(`${host}/_deploy/replacement/notes`, {
     method: 'PUT',
     headers: {
       authorization: `Bearer ${token}`,
+      'x-burrow-version': manifest.version,
       'x-replace': '1',
       'content-length': archive.length,
     },
