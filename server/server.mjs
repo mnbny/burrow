@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
 import zlib from 'node:zlib'
+import { lt, valid } from 'semver'
 
 import fontLicenses from './components/font-licenses.txt'
 import { footer } from './components/footer.mjs'
@@ -16,6 +17,8 @@ import styles from './components/page.css'
 const ROOT = process.env.DATA_DIR || '/data'
 const PORT = process.env.PORT || 8080
 const TOKENS = (process.env.DEPLOY_TOKENS || '').split(',').filter(Boolean)
+// Raise this only when deploys from older CLIs are no longer supported.
+const MIN_CLI_VERSION = '0.1.0'
 
 // When started as root, fix the data ownership and drop privileges before
 // anything listens, so a volume written by an older root image keeps working
@@ -87,7 +90,7 @@ const LOGIN_PAGE = `<!doctype html>
     <style>${styles}</style>
   </head>
   <body class="bg-base-100 font-sans text-base-content antialiased selection:bg-primary selection:text-primary-content">
-    <div class="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 py-7 sm:px-8 sm:py-10">
+    <div class="mx-auto flex min-h-dvh w-full max-w-7xl flex-col px-5 py-7 sm:px-8 sm:py-10">
       <main class="flex flex-1 items-center justify-center py-6">
         <section aria-labelledby="sign-in-title" class="w-full max-w-md border-2 border-primary p-5 sm:p-7">
           <header class="text-center sm:text-left">
@@ -100,12 +103,12 @@ const LOGIN_PAGE = `<!doctype html>
             <div>
               <label for="u" class="block bg-primary px-3 py-3 font-mono text-xs font-bold tracking-[0.08em] text-primary-content uppercase sm:text-sm">Username</label>
               <input id="u" name="username" autocomplete="username" placeholder="username" required autofocus
-                class="h-14 w-full min-w-0 rounded-none border-2 border-primary bg-base-100 px-4 text-base font-medium outline-none placeholder:text-base-content/45 focus:shadow-[4px_4px_0] focus:shadow-primary" />
+                class="h-14 w-full min-w-0 rounded-none border-2 border-primary bg-base-100 px-4 text-base font-medium outline-none placeholder:text-base-content/45 focus:shadow-[4px_4px_0] focus:shadow-focus" />
             </div>
             <div>
               <label for="p" class="block bg-primary px-3 py-3 font-mono text-xs font-bold tracking-[0.08em] text-primary-content uppercase sm:text-sm">Password</label>
               <input id="p" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required
-                class="h-14 w-full min-w-0 rounded-none border-2 border-primary bg-base-100 px-4 text-base font-medium outline-none placeholder:text-base-content/45 focus:shadow-[4px_4px_0] focus:shadow-primary" />
+                class="h-14 w-full min-w-0 rounded-none border-2 border-primary bg-base-100 px-4 text-base font-medium outline-none placeholder:text-base-content/45 focus:shadow-[4px_4px_0] focus:shadow-focus" />
             </div>
             <button type="submit" class="outline-button btn mt-2 mb-1 h-14 w-full text-base sm:text-lg">Continue</button>
           </form>
@@ -139,6 +142,14 @@ function scrub(dir) {
 function deploy(req, res, urlPath) {
   const token = (req.headers.authorization || '').replace('Bearer ', '')
   if (!TOKENS.includes(token)) return end(res, 401, 'bad token')
+
+  const cliVersion = valid(req.headers['x-burrow-version'])
+  if (!cliVersion || lt(cliVersion, MIN_CLI_VERSION))
+    return end(
+      res,
+      400,
+      `This server requires Burrow CLI ${MIN_CLI_VERSION} or newer. Received: ${cliVersion ?? 'missing or invalid version'}.`,
+    )
 
   const replace = req.headers['x-replace'] === '1'
   let project, preferred
