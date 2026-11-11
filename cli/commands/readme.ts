@@ -24,7 +24,7 @@ export default defineCommand({
   run() {
     const readme = findReadme()
     if (!readme) {
-      console.error(ansis.red('No README.md found above this executable. Run from the checkout.'))
+      console.error(ansis.red('The packaged README.md is missing. Reinstall Burrow or restore the checkout.'))
       process.exit(1)
     }
     process.stdout.write(readFileSync(readme, 'utf8'))

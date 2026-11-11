@@ -1,13 +1,52 @@
 import ansis from 'ansis'
 import { defineCommand } from 'citty'
 import { spawn } from 'node:child_process'
-import { stat } from 'node:fs/promises'
-import { basename, dirname } from 'node:path'
+import { createReadStream } from 'node:fs'
+import { mkdtemp, rm, stat } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { basename, dirname, join } from 'node:path'
 import { Readable } from 'node:stream'
+
+import manifest from '../../package.json' with { type: 'json' }
 
 function fail(message: string): never {
   console.error(ansis.red(message))
   process.exit(1)
+}
+
+async function uploadArchive(url: string, cwd: string, entry: string, headers: Record<string, string>) {
+  const temp = await mkdtemp(join(tmpdir(), 'burrow-deploy-'))
+  try {
+    // tar can emit a readable archive and still fail. Finish it before any
+    // request can replace live files, using disk rather than buffering in RAM.
+    const archive = join(temp, 'deploy.tar.gz')
+    await new Promise<void>((resolve, reject) => {
+      const tar = spawn('tar', ['-czf', archive, '-C', cwd, '--', entry], {
+        stdio: ['ignore', 'ignore', 'inherit'],
+      })
+      tar.once('error', error => reject(new Error(`Could not run tar: ${error.message}`)))
+      tar.once('close', code => {
+        if (code === 0) resolve()
+        else reject(new Error('tar failed to archive the target.'))
+      })
+    })
+
+    const stream = createReadStream(archive)
+    try {
+      return await fetch(url, {
+        body: Readable.toWeb(stream) as ReadableStream,
+        duplex: 'half',
+        headers,
+        method: 'PUT',
+      }).catch((error: Error) => {
+        throw new Error(`Could not upload to ${url}: ${error.message}`)
+      })
+    } finally {
+      stream.destroy()
+    }
+  } finally {
+    await rm(temp, { recursive: true, force: true })
+  }
 }
 
 export default defineCommand({
@@ -56,29 +95,17 @@ export default defineCommand({
     const slug = args.slug ? `/${encodeURIComponent(args.slug)}` : ''
 
     const [cwd, entry] = target.isDirectory() ? [args.dir, '.'] : [dirname(args.dir), basename(args.dir)]
-    const tar = spawn('tar', ['-cz', '-C', cwd, entry], { stdio: ['ignore', 'pipe', 'inherit'] })
-
-    // The archive streams straight into the request, so a large deploy never
-    // has to fit in memory.
-    const response = await fetch(`${host}/_deploy/${project}${slug}`, {
-      body: Readable.toWeb(tar.stdout) as ReadableStream,
-      duplex: 'half',
-      headers: {
-        authorization: `Bearer ${token}`,
-        ...(args.replace ? { 'x-replace': '1' } : {}),
-        ...(expires !== undefined ? { 'x-expires': String(expires) } : {}),
-        ...(args.auth ? { 'x-auth': args.auth } : {}),
-      },
-      method: 'PUT',
-    }).catch((error: Error) => {
-      if (tar.exitCode) fail('tar failed to archive the target.')
-      fail(`Could not reach ${host}: ${error.message}`)
-    })
+    const response = await uploadArchive(`${host}/_deploy/${project}${slug}`, cwd, entry, {
+      authorization: `Bearer ${token}`,
+      'x-burrow-version': manifest.version,
+      ...(args.replace ? { 'x-replace': '1' } : {}),
+      ...(expires !== undefined ? { 'x-expires': String(expires) } : {}),
+      ...(args.auth ? { 'x-auth': args.auth } : {}),
+    }).catch((error: Error) => fail(error.message))
 
     const body = (await response.text()).trim()
     if (!response.ok) fail(`Deploy failed (${response.status}): ${body}`)
 
-    // A single non-index file serves at its own name, not the slug root.
     const name = basename(args.dir)
     const suffix = target.isFile() && name !== 'index.html' ? encodeURIComponent(name) : ''
     // The URL is the only stdout, so a script can capture it directly.
