@@ -1,6 +1,6 @@
 import { build } from 'esbuild'
 import { execFileSync } from 'node:child_process'
-import { writeFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import process from 'node:process'
 import { minify } from 'terser'
@@ -75,7 +75,7 @@ async function main() {
 
     // esbuild's own minifier rewrites an escaped newline into a template literal holding a real one,
     // which costs a byte less and breaks the bundle across a thousand lines. terser escapes instead,
-    // so the committed artifact stays on one line and a source change stays a one-line diff.
+    // so executable code stays on one line and a source change stays a one-line diff.
     const minified = await minify(output.text, {
       compress: true,
       format: { ascii_only: true },
@@ -85,9 +85,14 @@ async function main() {
 
     if (!minified.code) throw new Error(`terser produced no output for ${entry}.`)
 
+    let code = minified.code
+    if (entry === join('cli', 'cli.ts')) {
+      // The standalone CLI can be copied without the rest of the package.
+      code += `\n/*!\n${await readFile(join(repoRoot, 'LICENSE'), 'utf8')}*/\n`
+    }
     const bundlePath = join(repoRoot, out)
-    await writeFile(bundlePath, minified.code)
-    console.log(`Wrote ${relative(repoRoot, bundlePath)} (${minified.code.length} bytes).`)
+    await writeFile(bundlePath, code)
+    console.log(`Wrote ${relative(repoRoot, bundlePath)} (${code.length} bytes).`)
   }
 }
 

@@ -28,6 +28,8 @@ catalog:
   playwright: 1.65.0
   prettier: 3.9.6
   prettier-plugin-packagejson: 3.0.2
+  semver: 7.8.6
+  sharp: 0.35.5
   tailwindcss: 4.3.5
   terser: 5.51.2
   tsx: 4.23.13

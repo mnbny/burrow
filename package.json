@@ -1,29 +1,33 @@
 {
-  "name": "@moonbunny/burrow",
-  "version": "0.0.0",
-  "private": true,
-  "description": "Self-hosted static report host with a deploy CLI",
+  "name": "@mnbny/burrow",
+  "version": "0.1.0",
+  "description": "Self-hosted static hosting with a deploy CLI",
+  "homepage": "https://github.com/mnbny/burrow#readme",
+  "bugs": {
+    "url": "https://github.com/mnbny/burrow/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mnbny/burrow.git"
+  },
+  "license": "MIT",
   "type": "module",
   "bin": {
-    "burrow": "./cli/burrow.mjs"
+    "burrow": "cli/burrow.bundle.mjs"
   },
+  "files": [
+    "cli/burrow.bundle.mjs"
+  ],
   "scripts": {
     "build": "tsx .tools/scripts/build.ts",
+    "prepack": "pnpm build",
+    "pack:check": "pnpm build && tsx .tools/scripts/pack-check.ts",
     "release": "tsx .tools/scripts/release.ts",
     "test": "pnpm build && ./.tools/tests/e2e.sh",
     "validate": "pnpm validate:format && pnpm validate:lint && pnpm validate:typecheck && pnpm build",
     "validate:format": "prettier --write . --ignore-unknown --cache --log-level=error",
     "validate:lint": "eslint --fix --cache --format=pretty .",
     "validate:typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "ansis": "catalog:",
-    "change-case": "catalog:",
-    "citty": "catalog:",
-    "dompurify": "catalog:",
-    "marked": "catalog:",
-    "marked-gfm-heading-id": "catalog:",
-    "tsx": "catalog:"
   },
   "devDependencies": {
     "@eslint/js": "catalog:",
@@ -33,7 +37,11 @@
     "@tailwindcss/cli": "catalog:",
     "@tsconfig/strictest": "catalog:",
     "@types/node": "catalog:",
+    "ansis": "catalog:",
+    "change-case": "catalog:",
+    "citty": "catalog:",
     "daisyui": "catalog:",
+    "dompurify": "catalog:",
     "esbuild": "catalog:",
     "eslint": "catalog:",
     "eslint-config-prettier": "catalog:",
@@ -42,16 +50,24 @@
     "eslint-plugin-prettier": "catalog:",
     "eslint-plugin-simple-import-sort": "catalog:",
     "globals": "catalog:",
+    "marked": "catalog:",
+    "marked-gfm-heading-id": "catalog:",
     "playwright": "catalog:",
     "prettier": "catalog:",
     "prettier-plugin-packagejson": "catalog:",
+    "semver": "catalog:",
+    "sharp": "catalog:",
     "tailwindcss": "catalog:",
     "terser": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:"
   },
   "packageManager": "pnpm@11.20.0",
   "engines": {
     "node": ">=22.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
