@@ -132,13 +132,13 @@ Open a deployed `.md` or `.markdown` file in a browser to read it in the built-i
 
 Scripts that do not request `text/html` receive the original Markdown. The viewer supports tables, task lists, fenced code blocks, and links to document sections. Relative links and images resolve from the document URL; deploy their assets in the same directory structure. Viewing credentials protect all modes and downloads.
 
-The viewer controls and sign-in page use Burrow's dark green color scheme, with near-black backgrounds, subtle borders, and mint accents. Rendered Markdown uses a separate palette for its background, text, links, tables, and code blocks. The styles, Markdown libraries, and fonts ship inside the server bundle; neither page needs a CDN. Preview sanitizes embedded HTML, and the uploaded file stays unchanged.
+Markdown previews sanitize embedded HTML and leave the uploaded file unchanged.
 
 ## Server
 
 One container. Run it behind your reverse proxy, which owns the domain and TLS. Allow request bodies at least as large as the upload cap in the proxy.
 
-This server requires Burrow CLI 0.1.0 or newer. The CLI sends its version with each deploy. A missing, invalid, or older version is rejected before the server extracts files; the error states the minimum required version. Update your pinned CLI when the server requires it.
+This server requires Burrow CLI 0.1.0 or newer. If a deploy reports an incompatible version, update the CLI to the minimum version stated in the error.
 
 ```sh
 docker compose up -d
@@ -164,8 +164,7 @@ The compose file pulls the published image and reads these from the environment 
 - `pnpm install`, then `node cli/setup.mjs --dev` to run your working copy as `burrow`.
 - `pnpm validate` formats, lints, typechecks, and rebuilds the committed `*.bundle.mjs` files. They are generated; never edit them.
 - The server source imports browser assets that require this build. Run the generated server bundle, not `server/server.mjs` directly.
-- Server UI files live in `server/components/`. Tests, fixtures, and test configuration live in `.tools/tests/`; build and release scripts live in `.tools/scripts/`.
 - `pnpm test` runs the end-to-end harness: the real container behind a real proxy in Docker, deployed to with the real CLI, plus compatibility, npm package, and browser checks. The first run downloads Playwright's Chromium browser.
-- `pnpm pack:check` builds and checks the npm tarball, then runs it with a fresh npm cache outside the checkout. Only the CLI bundle, README, license, and package metadata ship. The published package has no runtime dependencies.
+- `pnpm pack:check` checks the npm package and verifies that its CLI runs outside the checkout.
 - `pnpm release` builds the server image for x86_64 and pushes `:latest` plus an immutable `:<commit>` tag. A commit tagged `v<package-version>` also publishes the matching `:<package-version>` image tag. It refuses a dirty tree.
 - Use the repository's Woof `npm.version`, `npm.release`, and `docker.release` tokens for version bumps and releases. npm publication and server image publication are separate actions.
