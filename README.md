@@ -2,7 +2,7 @@
 <p align="center">A temporary home for static sites.</p>
 
 <p align="center">
-  <img width="480" height="480" alt="image" src="https://github.com/user-attachments/assets/15b2541f-c64a-4555-94b5-d130d8132ea5" />
+  <img width="480" height="480" alt="image" src="https://github.com/user-attachments/assets/51d56bc8-7667-4de2-9b37-b563ca9cb270" />
 </p>
 
 I wanted a simple way to share the sites my agents build. Something I could put online without giving every throwaway project a permanent home.
