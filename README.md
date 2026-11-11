@@ -1,20 +1,71 @@
 <h1 align="center">Burrow</h1>
- <p align="center">A tiny self-hosted host for static sites. You deploy a folder, you get a URL back, and the deploy quietly deletes itself after it expires. That makes it a good dumping ground for agents: build reports, demos, one-off pages.</p>
+<p align="center">A temporary home for static sites.</p>
 
 <p align="center">
   <img width="480" height="480" alt="image" src="https://github.com/user-attachments/assets/15b2541f-c64a-4555-94b5-d130d8132ea5" />
 </p>
 
-```sh
-burrow deploy ./dist --project demos
-# https://static.example.com/demos/1b2a97e0-.../
-```
+I wanted a simple way to share the sites my agents build. Something I could put online without giving every throwaway project a permanent home.
 
-Everything serves from one domain as `/{project}/{slug}/`.
+Burrow is a small static host you run on your own server. Its CLI uploads a site or any other static files and gives you a URL. Deploys expire after 30 days by default. You choose how long they stay.
+
+### Deploy with Burrow
+
+Run the CLI yourself or ask your agent to publish a site:
+
+<img src=".github/assets/readme/publish-site.jpg" alt="you: Publish the site in ./dist with Burrow. agent: runs burrow deploy ./dist --project burrow --slug launch and returns https://static.example.com/burrow/launch/. The site stays online for 30 days.">
+
+Burrow also gives Markdown a readable preview and can put a sign-in page in front of any deploy.
+
+| Markdown preview | Password protection |
+| :-: | :-: |
+| ![Burrow viewing formatted Markdown](.github/assets/readme/markdown-preview.jpg) | ![Burrow sign-in form](.github/assets/readme/sign-in.jpg) |
+
+### Add a password
+
+If the site isn't public yet, put a login in front of it. Your agent updates the existing link with a username and password.
+
+<img src=".github/assets/readme/protect-site.jpg" alt="you: Make that site private using reviewer and launch-demo. agent: runs burrow deploy ./dist --project burrow --slug launch --replace --auth reviewer:launch-demo and returns https://static.example.com/burrow/launch/. Visitors now sign in with those credentials.">
+
+### Update the site, keep the link
+
+Build the updated site, then ask your agent to replace the deployed version. Everyone keeps using the same URL.
+
+<img src=".github/assets/readme/replace-site.jpg" alt="you: The updated site is in ./dist; replace the version at that link. agent: runs burrow deploy ./dist --project burrow --slug launch --replace and returns https://static.example.com/burrow/launch/. The login and original expiry stay unchanged.">
+
+Replacement swaps all files in that deploy. The login and exact expiration date stay unchanged unless you supply new settings.
+
+### Choose how long it stays
+
+New deploys last 30 days by default. If you still need the site, ask for a fresh countdown. Or keep it permanently.
+
+<img src=".github/assets/readme/expiry-site.jpg" alt="you: Keep the site for another 30 days. agent: runs burrow deploy ./dist --project burrow --slug launch --replace --expires 30; the countdown restarts and the login stays unchanged. you: Keep it permanently instead. agent: runs the same command with --expires 0; the deploy no longer expires. Both commands return https://static.example.com/burrow/launch/.">
 
 ## CLI
 
-Needs Node.js 20 or later and `~/.local/bin` on your `PATH`:
+Needs Node.js 22 or later and `tar`. Run the CLI through an exact npm version:
+
+```sh
+npx --yes @mnbny/burrow@0.1.0 readme
+```
+
+Working with an agent? Give it this prompt:
+
+```text
+Run npx --yes @mnbny/burrow@0.1.0 readme and help me set up Burrow.
+```
+
+Once your [server](#server) is running, configure its URL and a deploy token:
+
+```sh
+export BURROW_HOST=https://static.example.com
+export BURROW_TOKEN=your-deploy-token
+npx --yes @mnbny/burrow@0.1.0 deploy ./dist --project burrow --slug launch
+```
+
+The examples below use `burrow` as shorthand for `npx --yes @mnbny/burrow@0.1.0`.
+
+To run from a checkout, link the bundled CLI and put `~/.local/bin` on your `PATH`:
 
 ```sh
 git clone git@github.com:mnbny/burrow.git
@@ -25,6 +76,8 @@ node cli/setup.mjs
 ### burrow deploy
 
 Ships a directory or a single file to the server, then prints the URL and nothing else, so a script can capture it. If the slug is taken, the server picks a new one unless you pass `--replace`. Trust the printed URL over the slug you asked for.
+
+Everything serves from one domain as `/{project}/{slug}/`.
 
 | Flag | Required | Description |
 | --- | :-: | --- |
@@ -50,10 +103,10 @@ burrow deploy ./coverage --project ci --slug pr-123 --auth me:secret --expires 7
 burrow deploy report.html --project docs --expires 0
 ```
 
-To update a document at the same URL, use an explicit slug and `--replace`:
+To update a deploy at the same URL, use an explicit slug and `--replace`:
 
 ```sh
-burrow deploy notes.md --project docs --slug notes --replace
+burrow deploy ./dist --project burrow --slug launch --replace
 ```
 
 The same command creates the deploy if it does not exist. Replacement removes all old files, including files absent from the new upload. For a single file, keep its filename unchanged to preserve the full URL. A failed upload leaves the existing deploy intact. There is no version history or rollback.
@@ -79,11 +132,13 @@ Open a deployed `.md` or `.markdown` file in a browser to read it in the built-i
 
 Scripts that do not request `text/html` receive the original Markdown. The viewer supports tables, task lists, fenced code blocks, and links to document sections. Relative links and images resolve from the document URL; deploy their assets in the same directory structure. Viewing credentials protect all modes and downloads.
 
-The viewer and sign-in page use the Moon Bunny theme. Their styles, Markdown libraries, and fonts ship inside the server bundle; neither page needs a CDN. Preview sanitizes embedded HTML, and the uploaded file stays unchanged.
+The viewer controls and sign-in page use Burrow's dark green color scheme, with near-black backgrounds, subtle borders, and mint accents. Rendered Markdown uses a separate palette for its background, text, links, tables, and code blocks. The styles, Markdown libraries, and fonts ship inside the server bundle; neither page needs a CDN. Preview sanitizes embedded HTML, and the uploaded file stays unchanged.
 
 ## Server
 
 One container. Run it behind your reverse proxy, which owns the domain and TLS. Allow request bodies at least as large as the upload cap in the proxy.
+
+This server requires Burrow CLI 0.1.0 or newer. The CLI sends its version with each deploy. A missing, invalid, or older version is rejected before the server extracts files; the error states the minimum required version. Update your pinned CLI when the server requires it.
 
 ```sh
 docker compose up -d
@@ -96,7 +151,7 @@ The compose file pulls the published image and reads these from the environment 
 | Var | Description |
 | --- | --- |
 | `IMAGE_URL` | Image to run. Default: the published image. |
-| `IMAGE_VERSION` | Image tag. Pin a `<commit>` tag to roll back. Default: `latest`. |
+| `IMAGE_VERSION` | Image tag. Pin a release version or `<commit>` tag to roll back. Default: `latest`. |
 | `DEPLOY_TOKENS` | Comma-separated tokens that may deploy. |
 | `MAX_BODY_MB` | Upload cap in MB; extracted content caps at 10x. Default `50`. |
 | `HIDE_FOOTER` | Set to `1` to remove the Moon Bunny footer from the Markdown viewer and sign-in page. Shown by default. |
@@ -110,5 +165,7 @@ The compose file pulls the published image and reads these from the environment 
 - `pnpm validate` formats, lints, typechecks, and rebuilds the committed `*.bundle.mjs` files. They are generated; never edit them.
 - The server source imports browser assets that require this build. Run the generated server bundle, not `server/server.mjs` directly.
 - Server UI files live in `server/components/`. Tests, fixtures, and test configuration live in `.tools/tests/`; build and release scripts live in `.tools/scripts/`.
-- `pnpm test` runs the end-to-end harness: the real container behind a real proxy in Docker, deployed to with the real CLI, plus browser checks for the Markdown viewer. The first run downloads Playwright's Chromium browser.
-- `pnpm release` builds the image for x86_64 and pushes `:latest` plus an immutable `:<commit>` tag. It refuses a dirty tree.
+- `pnpm test` runs the end-to-end harness: the real container behind a real proxy in Docker, deployed to with the real CLI, plus compatibility, npm package, and browser checks. The first run downloads Playwright's Chromium browser.
+- `pnpm pack:check` builds and checks the npm tarball, then runs it with a fresh npm cache outside the checkout. Only the CLI bundle, README, license, and package metadata ship. The published package has no runtime dependencies.
+- `pnpm release` builds the server image for x86_64 and pushes `:latest` plus an immutable `:<commit>` tag. A commit tagged `v<package-version>` also publishes the matching `:<package-version>` image tag. It refuses a dirty tree.
+- Use the repository's Woof `npm.version`, `npm.release`, and `docker.release` tokens for version bumps and releases. npm publication and server image publication are separate actions.

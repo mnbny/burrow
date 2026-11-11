@@ -1,0 +1,6 @@
+you  Make that site private. Use reviewer / launch-demo.
+
+agent  › burrow deploy ./dist --project burrow --slug launch --replace --auth reviewer:launch-demo
+         https://static.example.com/burrow/launch/
+
+       Same link. Visitors now sign in with those credentials.

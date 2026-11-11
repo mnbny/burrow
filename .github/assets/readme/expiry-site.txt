@@ -1,0 +1,13 @@
+you  Keep that site around for another 30 days.
+
+agent  › burrow deploy ./dist --project burrow --slug launch --replace --expires 30
+         https://static.example.com/burrow/launch/
+
+       Done. The 30 days start again today. The login stays the same.
+
+you  Actually, keep it permanently.
+
+agent  › burrow deploy ./dist --project burrow --slug launch --replace --expires 0
+         https://static.example.com/burrow/launch/
+
+       Done. This deploy no longer expires.

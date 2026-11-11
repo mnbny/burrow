@@ -4,6 +4,10 @@ Read [.agents/docs/index.md](./.agents/docs/index.md).
 
 After a feature or change reaches its logical conclusion, such as during verification or before a commit, use the `ir-living-docs` skill to update the living documentation. Do not do this preemptively.
 
+## README
+
+Before editing `README.md`, use this repository's `writing.readme` Woof token.
+
 ## Run Validations Smartly
 
 Validation command: `pnpm validate`

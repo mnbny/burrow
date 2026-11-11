@@ -1,0 +1,6 @@
+you  Publish the site in ./dist with Burrow.
+
+agent  › burrow deploy ./dist --project burrow --slug launch
+         https://static.example.com/burrow/launch/
+
+       Here's the link. The site stays online for 30 days.

@@ -1,0 +1,6 @@
+you  The updated site is in ./dist. Replace the version at that link.
+
+agent  › burrow deploy ./dist --project burrow --slug launch --replace
+         https://static.example.com/burrow/launch/
+
+       Updated. The login and original expiry stay as they were.
