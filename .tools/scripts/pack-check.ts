@@ -43,9 +43,10 @@ async function main() {
     }
     const license = execFileSync('tar', ['-xOf', tarball, 'package/LICENSE'], { encoding: 'utf8' })
     const bundle = execFileSync('tar', ['-xOf', tarball, 'package/cli/burrow.bundle.mjs'], { encoding: 'utf8' })
+    assert.equal(license, readFileSync(join(repoRoot, 'LICENSE'), 'utf8'))
+    assert(bundle.includes(license.trim()), 'Project license is missing from the standalone CLI')
     for (const dependency of ['ansis', 'citty']) {
       const notice = readFileSync(join(repoRoot, 'node_modules', dependency, 'LICENSE'), 'utf8').trim()
-      assert(license.includes(notice), `${dependency} notice is missing from LICENSE`)
       assert(bundle.includes(notice), `${dependency} notice is missing from the standalone CLI`)
     }
     console.log(
@@ -57,7 +58,11 @@ async function main() {
       cwd: temp,
       encoding: 'utf8',
     })
-    assert.equal(dryRun.status, 0, dryRun.stderr || dryRun.error?.message)
+    // npm refuses even a dry run of an already published version.
+    const alreadyPublished = dryRun.stderr.includes(
+      `You cannot publish over the previously published versions: ${manifest.version}.`,
+    )
+    assert(dryRun.status === 0 || (dryRun.status === 1 && alreadyPublished), dryRun.stderr || dryRun.error?.message)
     assert(!dryRun.stderr.includes('auto-corrected'), dryRun.stderr)
 
     const work = join(temp, 'work')

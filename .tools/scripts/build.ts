@@ -88,7 +88,13 @@ async function main() {
     let code = minified.code
     if (entry === join('cli', 'cli.ts')) {
       // The standalone CLI can be copied without the rest of the package.
-      code += `\n/*!\n${await readFile(join(repoRoot, 'LICENSE'), 'utf8')}*/\n`
+      let notices = await readFile(join(repoRoot, 'LICENSE'), 'utf8')
+      notices += '\nThird-party notices for dependencies included in the standalone CLI:\n'
+      for (const dependency of ['ansis', 'citty']) {
+        const license = (await readFile(join(repoRoot, 'node_modules', dependency, 'LICENSE'), 'utf8')).trim()
+        notices += `\n${dependency}\n${'-'.repeat(dependency.length)}\n\n${license}\n`
+      }
+      code += `\n/*!\n${notices}*/\n`
     }
     const bundlePath = join(repoRoot, out)
     await writeFile(bundlePath, code)

@@ -51,7 +51,7 @@ Both pages share the Moon Bunny footer with links to the Burrow source repositor
 
 ## Distribution
 
-The CLI's npm package contains the standalone bundle, the guide, the license, and package metadata. It has no runtime dependencies. The package license includes the bundled dependency notices, and the CLI also carries those notices when copied on its own. The package can run outside a checkout and reads its own guide. Recommended invocations pin an exact package version, and upgrades are deliberate. CLI publication and server image publication are separate actions.
+The CLI's npm package contains the standalone bundle, the guide, the license, and package metadata. It has no runtime dependencies. The project uses the MIT license. The standalone CLI carries the project license and bundled dependency notices, including when copied on its own. The package can run outside a checkout and reads its own guide. Recommended invocations pin an exact package version, and upgrades are deliberate. CLI publication and server image publication are separate actions.
 
 A server release publishes an image to a container registry with a moving latest tag and a tag that names its source commit. A named Git release also publishes the matching package-version image tag. An image-only commit keeps its own commit tag and does not move a named release tag. A release runs only from a clean, committed tree. The compose file pulls the published image instead of building, so the NAS never needs a checkout. A rollback runs the previous commit tag. The test harness is the exception: it always builds the image from the working tree, so it tests the source and not a stale release.
 
