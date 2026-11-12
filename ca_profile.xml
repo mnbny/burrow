@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommunityApplications>
+  <Profile>Burrow by Moon Bunny: self-hosted static hosting with a deploy CLI. Source, setup instructions, and support are available on GitHub.</Profile>
+  <Icon>https://raw.githubusercontent.com/mnbny/burrow/master/unraid/burrow.svg</Icon>
+  <WebPage>https://moonbunny.io</WebPage>
+</CommunityApplications>

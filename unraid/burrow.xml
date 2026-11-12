@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Container version="2">
+  <Name>burrow</Name>
+  <Repository>ghcr.io/mnbny/burrow:latest</Repository>
+  <Registry>https://github.com/mnbny/burrow/pkgs/container/burrow</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/mnbny/burrow/issues</Support>
+  <Project>https://github.com/mnbny/burrow</Project>
+  <ReadMe>https://raw.githubusercontent.com/mnbny/burrow/master/README.md</ReadMe>
+  <Overview>Self-hosted static hosting with a CLI. Publish HTML sites, Markdown documents, and other static files at a shareable URL. Deploys expire after 30 days by default, with optional passwords, custom expiry, and replacement at the same URL.
+[br][br]
+Set a deploy token before installing. On your computer, configure the Burrow CLI with that token and your server URL. Burrow has no management dashboard; use the CLI to deploy and open the URL it returns.
+[br][br]
+The default host port is 47831. For public links, point your reverse proxy at this server and port, configure a domain and HTTPS, and allow request bodies at least as large as the upload limit. See the project README for CLI setup.
+[br][br]
+Made by Moon Bunny: https://moonbunny.io</Overview>
+  <Category>Network:Web</Category>
+  <ExtraSearchTerms>static hosting html markdown deploy cli</ExtraSearchTerms>
+  <TemplateURL>https://raw.githubusercontent.com/mnbny/burrow/master/unraid/burrow.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/mnbny/burrow/master/unraid/burrow.svg</Icon>
+  <Screenshot>https://raw.githubusercontent.com/mnbny/burrow/master/.github/assets/readme/markdown-preview.jpg</Screenshot>
+  <Screenshot>https://raw.githubusercontent.com/mnbny/burrow/master/.github/assets/readme/sign-in.jpg</Screenshot>
+  <License>MIT</License>
+  <Config Name="HTTP port" Target="8080" Default="47831" Mode="tcp" Description="Host port for uploads and hosted files. Change it if already in use." Type="Port" Display="always" Required="true" Mask="false">47831</Config>
+  <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/burrow" Mode="rw" Description="Persistent storage for deployed files and their settings. Use a dedicated directory." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/burrow</Config>
+  <Config Name="Deploy tokens" Target="DEPLOY_TOKENS" Default="" Description="Required. Generate a token with openssl rand -hex 32 and use it as BURROW_TOKEN in the CLI. For multiple tokens, separate them with commas and no spaces." Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="Upload limit (MB)" Target="MAX_BODY_MB" Default="50" Description="Maximum upload size in MB. Extracted content is limited to ten times this value. Match your reverse proxy's request body limit." Type="Variable" Display="advanced" Required="true" Mask="false">50</Config>
+  <Config Name="Hide footer" Target="HIDE_FOOTER" Default="0|1" Description="0 shows the Moon Bunny footer on Markdown previews and sign-in pages; 1 hides it." Type="Variable" Display="advanced" Required="true" Mask="false">0</Config>
+</Container>
